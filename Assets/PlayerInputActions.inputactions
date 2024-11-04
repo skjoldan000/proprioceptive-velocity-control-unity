@@ -1,0 +1,60 @@
+{
+    "name": "PlayerInputActions",
+    "maps": [
+        {
+            "name": "Setup",
+            "id": "f027a049-9c22-47db-897d-7973fd98a069",
+            "actions": [
+                {
+                    "name": "PositionDesk",
+                    "type": "Button",
+                    "id": "31e4f2e1-bff4-423d-8a04-b2803f38d2a7",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "PositionDeskHighlight",
+                    "type": "Button",
+                    "id": "c00340be-2518-41c7-b890-a0b78b35f82b",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "7b509734-11cc-41aa-b6e1-b03e9e0152e4",
+                    "path": "<OculusTouchController>{LeftHand}/primaryButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "PositionDesk",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "fbf4196e-d4c0-43ce-a981-afc80b7dda22",
+                    "path": "<OculusTouchController>{LeftHand}/primaryTouched",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "PositionDeskHighlight",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": [
+        {
+            "name": "QuestControllers",
+            "bindingGroup": "QuestControllers",
+            "devices": []
+        }
+    ]
+}
