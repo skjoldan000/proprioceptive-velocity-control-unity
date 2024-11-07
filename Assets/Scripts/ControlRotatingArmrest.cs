@@ -4,14 +4,19 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 
-public class ControlRotatingArmrest : MonoBehaviour
+public class ControlrotatingArm : MonoBehaviour
 {
     public GameObject handAnchor;
+    public GameObject controllerAnchor;
     public GameObject a_button;
     public GameObject gripModel;
-    public GameObject rotatingArmrest;
+    public GameObject rotatingArm;
+    public GameObject rotatingArmObj;
     public float angleMultiplier = 1f;
     public GameObject positionToOffsetFrom;
+    public GameObject positionProjected;
+    public GameObject positionOffsetProjected;
+    public GameObject offsetControllerAnchor;
     public bool rotatingArmVisible = true;
     public bool calibrationComplete = false;
     public GenerateInstructions generateInstructions;
@@ -33,30 +38,45 @@ public class ControlRotatingArmrest : MonoBehaviour
     }
     void Update()
     {
+        if (Input.GetKeyDown(KeyCode.Q))
+        {
+            StartCalibration();
+            Debug.LogWarning("Calibration restarted");
+        }
         if (calibrationComplete)
         {
-            angleStartToController = CalculateAngleDirectional(positionToOffsetFrom, handAnchor, rotatingArmrest);
+            controllerAnchor.SetActive(false);
+            offsetControllerAnchor.SetActive(true);
+
+            angleStartToController = CalculateAngleDirectional(positionToOffsetFrom, handAnchor, rotatingArm);
             angleStartToOffsetController = angleStartToController * angleMultiplier;
-            Vector3 dirToController = handAnchor.transform.position - rotatingArmrest.transform.position;
-            Vector3 dirToStart = positionToOffsetFrom.transform.position - rotatingArmrest.transform.position;
+            Vector3 dirToController = handAnchor.transform.position - rotatingArm.transform.position;
+            Vector3 dirToStart = positionToOffsetFrom.transform.position - rotatingArm.transform.position;
             Vector3 dirToOffsetController = Quaternion.Euler(0, angleStartToOffsetController, 0) * dirToStart;
 
-            rotatingArmrest.transform.forward = dirToOffsetController;
+            rotatingArm.transform.forward = dirToOffsetController;
+
+        }
+        else
+        {
+            controllerAnchor.SetActive(true);
+            offsetControllerAnchor.SetActive(false);
         }
     }
 
     IEnumerator calibrateRotatingArmLocation()
     {
+        rotatingArmObj.SetActive(false);
         Debug.LogWarning("Calibration started");
         calibrationComplete = false;
-        GameObject instructionsArrow = generateInstructions.InstantiateArrowText(
-            handAnchor,
+        GameObject instructionsArrow1 = generateInstructions.InstantiateArrowText(
+            a_button,
             "Press A to start calibration",
             true
         );
         yield return new WaitUntil(() => (OVRInput.GetDown(OVRInput.Button.One)));
         Debug.LogWarning("Calibration start key pressed");
-        Destroy(instructionsArrow);
+        Destroy(instructionsArrow1);
         positionToOffsetFrom.transform.position = handAnchor.transform.position;
         positionToOffsetFrom.transform.rotation = handAnchor.transform.rotation;
 
@@ -64,8 +84,10 @@ public class ControlRotatingArmrest : MonoBehaviour
         yield return new WaitUntil(() => (savePointsForCalibrationComplete == true));
         Debug.LogWarning("Calibration save points for calibration complete");
         CalibrateCircleCenter(pointsForCalibration);
-        positionToOffsetFrom.transform.position = new Vector3(positionToOffsetFrom.transform.position.x, rotatingArmrest.transform.position.y, positionToOffsetFrom.transform.position.z);
+        
+
         calibrationComplete = true;
+        rotatingArmObj.SetActive(true);
         Debug.LogWarning("Calibration completed");
         Debug.LogWarning("radius " + radius);
         Debug.LogWarning("radius SD " + radiusSD);
@@ -83,7 +105,7 @@ public class ControlRotatingArmrest : MonoBehaviour
 
         GameObject instructionsArrow = generateInstructions.InstantiateArrowText(
             a_button,
-            "Press A to start calibration",
+            "Move " + angleToCalibrateWith + " to the right",
             true
         );
         TextMeshPro instructionsArrowText = instructionsArrow.GetComponentInChildren<TextMeshPro>();
@@ -185,10 +207,24 @@ public class ControlRotatingArmrest : MonoBehaviour
         radiusSD = Mathf.Sqrt(sumOfSquares / radii.Count);
 
         // Set center of rotating armrest
-        rotatingArmrest.transform.position = aveCenter;
-        rotatingArmrest.transform.position = rotatingArmrest.transform.position;
+        rotatingArm.transform.position = aveCenter;
+        rotatingArm.transform.eulerAngles = new Vector3(0, 0, 0);
         // Set grip to correct distance
         gripModel.transform.localPosition = new Vector3(0, 0, -(radius+0.003f));
+        positionProjected.transform.localPosition = new Vector3(0, 0, radius);
+        positionOffsetProjected.transform.localPosition = new Vector3(0, 0, radius);
+
+
+        positionToOffsetFrom.transform.position = new Vector3(positionToOffsetFrom.transform.position.x, rotatingArm.transform.position.y, positionToOffsetFrom.transform.position.z);
+        angleStartToController = CalculateAngleDirectional(positionToOffsetFrom, handAnchor, rotatingArm);
+        angleStartToOffsetController = angleStartToController * angleMultiplier;
+        Vector3 dirToController = handAnchor.transform.position - rotatingArm.transform.position;
+        Vector3 dirToStart = positionToOffsetFrom.transform.position - rotatingArm.transform.position;
+        Vector3 dirToOffsetController = Quaternion.Euler(0, angleStartToOffsetController, 0) * dirToStart;
+        rotatingArm.transform.forward = dirToOffsetController;
+
+        offsetControllerAnchor.transform.rotation = handAnchor.transform.rotation;
+
     }
 
     private float CalculateAngleDirectional(GameObject At, GameObject Bt, GameObject Ct)
