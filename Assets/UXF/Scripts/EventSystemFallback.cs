@@ -28,7 +28,7 @@ namespace UXF
 
         void CreateEventSystem()
         {
-            if (FindObjectOfType<EventSystem>() == null)
+            if (FindFirstObjectByType<EventSystem>() == null)
             {
                 var newEventSystem = Instantiate(eventSystemPrefab);
                 newEventSystem.name = "EventSystem";
