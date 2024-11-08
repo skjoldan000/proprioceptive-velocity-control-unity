@@ -34,7 +34,7 @@ public class ControlrotatingArm : MonoBehaviour
 
     void Start()
     {
-        StartCalibration();
+        //StartCalibration();
     }
     void Update()
     {

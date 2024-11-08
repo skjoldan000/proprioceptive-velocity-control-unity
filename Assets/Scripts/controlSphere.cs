@@ -1,17 +1,17 @@
 using UnityEngine;
 
-public class controlSphere : MonoBehaviour
+public class ControlSphere : MonoBehaviour
 {
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     private GameObject obj;
     void Start()
     {
-        obj = transform.Find("obj").gameObject;
+        obj = transform.Find("Sphere").gameObject;
     }
 
-    public void PositionAnchor(Transform requestedPosition)
+    public void PositionAnchor(Vector3 requestedPosition)
     {
-        transform.position = requestedPosition.position;
+        transform.localPosition = requestedPosition;
     }
     public void ColorObj(Material requestedColor)
     {
