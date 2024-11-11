@@ -1,19 +1,17 @@
 {
     "runBlocks": [1],
-    "numRepeats": 3,
-    "oneDim": false,
+    "numRepeats": 1,
+    "nDims": 2,
     "vibrationPans": [-1, 0, 1, 2],
+    "calibration": false, 
+    "controllerVisibleTrialStart": false,
+    "turnControllerVisibleMidpoint": true,
+    "controllerMidpointVisibleTime": 0.1,
+    "visualXOffset": 0,
+    "visualXOffsets": [-5, 0, 5],
 
     "blockInstructions": 
     {
-        "1":"Calibration instructions: \nGrab both controllers.\nPress the GREEN button on right controller to start calibration.",
-        "2":"Practice instructions: \nHere you get the chance to practice.\nMove controller to blue sphere and press BLUE button to start trial\nWait for target sphere to turn green\nMove controller to the green sphere and press GREEN button to finish trial.\nTry to follow the speed of the pacer sphere.",
-        "3":"Block 3 instructions: \nStart trial at the blue sphere, and press BLUE button on controller to initiate trial. Once the target sphere turns green, move at the practiced pace, and press GREEN button at the center of the target.",
-        "4":"Block 4 instructions: \nStart trial at the blue sphere, and press BLUE button on controller to initiate trial. Once the target sphere turns green, move at the practiced pace, and press GREEN button at the center of the target.\nYour controller will be invisible.",
-        "5":"Block 5 instructions: \nStart trial at the blue sphere, and press BLUE button on controller to initiate trial. Once the target sphere turns green, move at the practiced pace, and press GREEN button at the center of the target.\nYour controller will be invisible.",
-        "6":"Block 6 instructions: \nStart trial at the blue sphere, and press BLUE button on controller to initiate trial. Once the target sphere turns green, move at the practiced pace, and press GREEN button at the center of the target.\nYour controller will be invisible and the vibration motors will sometimes vibrate.",
-        "7":"Block 7 instructions: \nStart trial at the blue sphere, and press BLUE button on controller to initiate trial. Once the target sphere turns green, move at the practiced pace through the target.\nTrial will end automatically once you pass through the target.\nThe virtual controller will move slightly too fast or slow. You will be asked to judge which after each trial.",
-        "8":"Block 8 instructions: \nStart trial at the blue sphere, and press BLUE button on controller to initiate trial. Once the target sphere turns green, move at the practiced pace, and press GREEN button at the center of the target.\nYour controller will be invisible.",
-        "9":"Block 9 instructions: \nStart trial at the blue sphere, and press BLUE button on controller to initiate trial. Once the target sphere turns green, move at the practiced pace, and press GREEN button at the center of the target.\nYour controller will be invisible and the vibration motors will sometimes vibrate."
+        "1":"Calibration instructions: \nGrab both controllers.\nPress the GREEN button on right controller to start calibration."
     }
 }

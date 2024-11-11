@@ -11,7 +11,21 @@ public class ExperimentConstructorScript : MonoBehaviour
         Debug.LogWarning("Experiment constructor started");
         List<int> runBlocks = uxfSession.settings.GetIntList("runBlocks");
         int numRepeats = uxfSession.settings.GetInt("numRepeats");
-        bool oneDim = uxfSession.settings.GetBool("oneDim");
+        int nDims = uxfSession.settings.GetInt("nDims");
+        List<float> visualXOffsets = uxfSession.settings.GetFloatList("visualOffsets");
+
+        // calibration 1d
+        if (nDims == 1)
+        {
+        }
+
+        // calibration 2d
+        if (nDims == 2)
+        {
+            Block calibrationBlock = uxfSession.CreateBlock();
+            Trial newTrial = calibrationBlock.CreateTrial();
+            newTrial.settings.SetValue("calibration", true);
+        }
 
         blockNumber = 1;
         if (runBlocks.Contains(blockNumber))
@@ -19,8 +33,11 @@ public class ExperimentConstructorScript : MonoBehaviour
             Block block1 = uxfSession.CreateBlock();
             for (int i = 0; i < numRepeats; i++)
             {
-                Trial newTrial = block1.CreateTrial();
-                Debug.LogWarning("Trial constructed " + i);
+                foreach (float visualXOffset in visualXOffsets)
+                {
+                    Trial newTrial = block1.CreateTrial();
+                    newTrial.settings.SetValue("visualOffset", visualOffset);
+                }
             }
         }
     }
