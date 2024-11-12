@@ -4,6 +4,8 @@ public class ControlSphere : MonoBehaviour
 {
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     private GameObject obj;
+    public GameObject rightHandAnchor;
+    public bool visible = true;
     void Start()
     {
         obj = transform.Find("Sphere").gameObject;
@@ -17,15 +19,24 @@ public class ControlSphere : MonoBehaviour
     {
         obj.GetComponent<Renderer>().material = requestedColor;
     }
-    public void VisibleObj(bool targetVisibility)
-    {
-        obj.SetActive(targetVisibility);
-    }
+    //public void VisibleObj(bool targetVisibility)
+    //{
+    //    visible = targetVisibility;
+    //    obj.SetActive(visible);
+    //}
     public void visualOffsetFromReference(Vector3 requestedOffset, Transform referenceTransform)
     {
         transform.position = transform.position
-         + referenceTransform.right * requestedOffset.x
-         + referenceTransform.up * requestedOffset.y
-         + referenceTransform.forward * requestedOffset.z;
+         + referenceTransform.right.normalized * requestedOffset.x
+         + referenceTransform.up.normalized * requestedOffset.y
+         + referenceTransform.forward.normalized * requestedOffset.z;
+    }
+    public void ResetVisualOffset()
+    {
+        transform.position = rightHandAnchor.transform.position;
+    }
+    void Update()
+    {
+        obj.SetActive(visible);
     }
 }

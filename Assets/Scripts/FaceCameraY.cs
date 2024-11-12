@@ -22,5 +22,6 @@ public class FaceCameraY : MonoBehaviour
         // Look at the camera along the y-axis only.
         Vector3 targetPosition = new Vector3(centerEyeAnchor.position.x, transform.position.y, centerEyeAnchor.position.z);
         transform.LookAt(targetPosition);
+        transform.Rotate(0, 180, 0);
     }
 }
