@@ -36,7 +36,7 @@ plot_endpoints <- trials %>%
   target + 
   geom_point() + 
   coord_fixed(ratio = 1)
-
+plot_endpoints
 plot_endpoints %>% ggsave(filename = "../figs/plot_endpoints.png", width = 6, height = 6)
 
 plot_tracking <- tracking %>% 
@@ -51,6 +51,6 @@ plot_tracking <- tracking %>%
   coord_fixed(ratio = 1, xlim = c(-0.2, .2)) +
   facet_wrap(~visualXOffset)
   
-  
+plot_tracking
 plot_tracking %>% ggsave(filename = "../figs/plot_tracking.png",  width = 6, height = 6)
 print("File save complete")

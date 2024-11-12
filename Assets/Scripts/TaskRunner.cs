@@ -48,6 +48,7 @@ public class TaskRunner : MonoBehaviour
     public string trialID;
 
     // Coroutines
+    private Coroutine currentSubTrialCR;
     private Coroutine currentTrialCR;
     private Coroutine calibrationCR;
 
@@ -63,6 +64,7 @@ public class TaskRunner : MonoBehaviour
     public TextMeshPro trialCounter;
 
     // Results to save
+    private Vector3 startPos;
     private Vector3 targetPos;
     private Vector3 trueInput;
     private Vector3 visualOffsetInput;
@@ -95,6 +97,7 @@ public class TaskRunner : MonoBehaviour
     public void EndTrialCoroutine()
     {
         StopCoroutine(currentTrialCR);
+        StopCoroutine(currentSubTrialCR);
     }
 
     IEnumerator TrialCoroutine(Trial trial)
@@ -140,7 +143,7 @@ public class TaskRunner : MonoBehaviour
         trialProgress = "trialSetup";
         trialSetupTime = Time.time;
 
-
+        startPos = trialStart.transform.position;
         targetPos = new Vector3(0f, 0f, 0.4f);
         controllerSphereScript.visible = true;
         trialStartScript.visible = true;
@@ -196,6 +199,20 @@ public class TaskRunner : MonoBehaviour
             }
             yield return null;
         }
+
+        // Trial is now initiated
+        if (trial.settings.GetInt("nTargets") == 1)
+        {
+            currentSubTrialCR = StartCoroutine(TrialSingleTargetCoroutine(trial));
+        }
+        if (trial.settings.GetInt("nTargets") > 1)
+        {
+            currentSubTrialCR = StartCoroutine(TrialMultiTargetCoroutine(trial));
+        }
+
+    }
+    IEnumerator TrialSingleTargetCoroutine(Trial trial)
+    {
         Debug.Log("target local: " + trialTarget.transform.localPosition);
 
         trialProgress = "trialStarted";
@@ -213,7 +230,6 @@ public class TaskRunner : MonoBehaviour
             0),
             trialSpace.transform);
         trialTargetScript.ColorObj(targetGreen);
-
 
         // Controller visibility
         yield return new WaitUntil(() =>(posControllerInTrialSpace.z > .1));
@@ -242,13 +258,28 @@ public class TaskRunner : MonoBehaviour
 
         trial.End();
     }
-    IEnumerator TrialSingleTargetCoroutine(Trial trial)
-    {
-        yield return null;
-    }
     IEnumerator TrialMultiTargetCoroutine(Trial trial)
     {
+        GameObject currentTarget
+        Debug.Log("target local: " + trialTarget.transform.localPosition);
+
+        trialProgress = "trialStarted";
+        trialStartedTime = Time.time;
+
+        trialStartScript.visible = false;
+        if (!(trial.settings.GetBool("controllerVisibleTrialStart")))
+        {
+            controllerSphereScript.visible = false;
+        }
         yield return null;
+        controllerSphereScript.visualOffsetFromReference(new Vector3(
+            trial.settings.GetFloat("visualXOffset"), 
+            0, 
+            0),
+            trialSpace.transform);
+        trialTargetScript.ColorObj(targetGreen);
+
+        trial.End();
     }
     // Update is called once per frame
     void Update()
@@ -305,6 +336,9 @@ public class TaskRunner : MonoBehaviour
         Session.instance.CurrentTrial.result["targetPos.x"] = targetPos.x;
         Session.instance.CurrentTrial.result["targetPos.y"] = targetPos.y;
         Session.instance.CurrentTrial.result["targetPos.z"] = targetPos.z;
+        Session.instance.CurrentTrial.result["startPos.x"] = startPos.x;
+        Session.instance.CurrentTrial.result["startPos.y"] = startPos.y;
+        Session.instance.CurrentTrial.result["startPos.z"] = startPos.z;
         Session.instance.CurrentTrial.result["trueInput.x"] = trueInput.x;
         Session.instance.CurrentTrial.result["trueInput.y"] = trueInput.y;
         Session.instance.CurrentTrial.result["trueInput.z"] = trueInput.z;
