@@ -3,6 +3,7 @@ library(ggforce)
 
 dataPath <- "../../testData/run1/1/S001/"
 
+
 trials <- read_csv(paste0(dataPath, "trial_results.csv"))
 
 trials <- trials %>% 
@@ -40,13 +41,17 @@ plot_endpoints
 plot_endpoints %>% ggsave(filename = "../figs/plot_endpoints.png", width = 6, height = 6)
 
 plot_tracking <- tracking %>% 
-  filter(condition == "truepos") %>% 
+  filter(!(condition == "vispos" & time < trialControlVisibilityOffTime)) %>% 
   mutate(
-    x = if_else(controllerSphereVisible == TRUE, x+visualXOffset, x)
+    type = case_when(
+      condition == "truepos" ~ "true pos",
+      condition == "vispos" & controllerSphereVisible == TRUE ~ "vis feedback",
+      condition == "vispos" & controllerSphereVisible == FALSE ~ "implied pos",
+    )
   ) %>% 
-  ggplot(aes(x = x, y = z, color = controllerSphereVisible, group = trialID))+
+  ggplot(aes(x = x, y = z, color = type, group = trialID))+
   target + 
-  geom_point(size = .5) + 
+  geom_point(size = 1) + 
   #geom_path(size = 1) +
   coord_fixed(ratio = 1, xlim = c(-0.2, .2)) +
   facet_wrap(~visualXOffset)

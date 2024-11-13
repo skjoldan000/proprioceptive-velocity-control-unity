@@ -68,5 +68,17 @@ public class ExperimentConstructorScript : MonoBehaviour
             }
             block3.trials.Shuffle();
         }
+        blockNumber = 4;
+        if (runBlocks.Contains(blockNumber))
+        {
+            Block block4 = uxfSession.CreateBlock();
+            for (int i = 0; i < numRepeats; i++)
+            {
+                Trial newTrial = block4.CreateTrial();
+                newTrial.settings.SetValue("blockNumber", blockNumber);
+                newTrial.settings.SetValue("controllerVisibleTrialStart", false);
+                newTrial.settings.SetValue("nTargets", 5);
+            }
+        }
     }
 }

@@ -46,9 +46,9 @@ public class TaskRunner : MonoBehaviour
     private bool calibrationComplete = false;
     public string trialProgress;
     public string trialID;
+    public int targetNumber;
 
     // Coroutines
-    private Coroutine currentSubTrialCR;
     private Coroutine currentTrialCR;
     private Coroutine calibrationCR;
 
@@ -60,7 +60,6 @@ public class TaskRunner : MonoBehaviour
     private float trialInputTime;
 
     // Others
-    private Vector3 posControllerInTrialSpace;
     public TextMeshPro trialCounter;
 
     // Results to save
@@ -81,9 +80,9 @@ public class TaskRunner : MonoBehaviour
         controllerSphereScript = controllerSphere.GetComponent<ControlSphere>();
         trackedDeskScript = trackedDesk.GetComponent<PositionDesk>();
 
-        trialStartScript.visible = false;
-        trialTargetScript.visible = false;
-        controllerSphereScript.visible = false;
+        trialStartScript.Visible(false);
+        trialTargetScript.Visible(false);
+        controllerSphereScript.Visible(false);
         tracker1d.SetActive(false);
         tracker2d.SetActive(false);
     }
@@ -97,7 +96,6 @@ public class TaskRunner : MonoBehaviour
     public void EndTrialCoroutine()
     {
         StopCoroutine(currentTrialCR);
-        StopCoroutine(currentSubTrialCR);
     }
 
     IEnumerator TrialCoroutine(Trial trial)
@@ -145,9 +143,9 @@ public class TaskRunner : MonoBehaviour
 
         startPos = trialStart.transform.position;
         targetPos = new Vector3(0f, 0f, 0.4f);
-        controllerSphereScript.visible = true;
-        trialStartScript.visible = true;
-        trialTargetScript.visible = true;
+        controllerSphereScript.Visible(true);
+        trialStartScript.Visible(true);
+        trialTargetScript.Visible(true);
         trialTargetScript.PositionAnchor(targetPos);
         trialTargetScript.ColorObj(standbyGrey);
         trialStartScript.ColorObj(startTeal);
@@ -200,45 +198,59 @@ public class TaskRunner : MonoBehaviour
             yield return null;
         }
 
-        // Trial is now initiated
-        if (trial.settings.GetInt("nTargets") == 1)
-        {
-            currentSubTrialCR = StartCoroutine(TrialSingleTargetCoroutine(trial));
-        }
-        if (trial.settings.GetInt("nTargets") > 1)
-        {
-            currentSubTrialCR = StartCoroutine(TrialMultiTargetCoroutine(trial));
-        }
-
-    }
-    IEnumerator TrialSingleTargetCoroutine(Trial trial)
-    {
         Debug.Log("target local: " + trialTarget.transform.localPosition);
 
         trialProgress = "trialStarted";
         trialStartedTime = Time.time;
 
-        trialStartScript.visible = false;
-        if (!(trial.settings.GetBool("controllerVisibleTrialStart")))
+        if (trial.settings.GetInt("nTargets") == 1)
         {
-            controllerSphereScript.visible = false;
+            trialStartScript.Visible(false);
+            controllerSphereScript.Visible(trial.settings.GetBool("controllerVisibleTrialStart"));
+
+
+            controllerSphereScript.visualOffsetFromReference(new Vector3(
+                trial.settings.GetFloat("visualXOffset"), 
+                0, 
+                0),
+                trialSpace.transform);
+            trialTargetScript.ColorObj(targetGreen);
+            // Trial is now initiated
+            // Controller visibility
+            yield return new WaitUntil(() =>(GetRelativePosition(trialSpace, rightHandAnchor).z > .1));
+            StartCoroutine(ControllerVisibility(trial));
+
+            // Ensure input button is not fat fingered immediately before input is allowed
+            yield return new WaitUntil(() => (Vector3.Distance(trialStart.transform.position, controllerSphere.transform.position) > 0.1f));
+            yield return new WaitUntil(() => (OVRInput.GetDown(OVRInput.Button.One)));
         }
-        yield return null;
-        controllerSphereScript.visualOffsetFromReference(new Vector3(
-            trial.settings.GetFloat("visualXOffset"), 
-            0, 
-            0),
-            trialSpace.transform);
-        trialTargetScript.ColorObj(targetGreen);
 
-        // Controller visibility
-        yield return new WaitUntil(() =>(posControllerInTrialSpace.z > .1));
-        StartCoroutine(ControllerVisibility(trial));
+        if (trial.settings.GetInt("nTargets") > 1)
+        {
+            controllerSphereScript.Visible(trial.settings.GetBool("controllerVisibleTrialStart"));
+            Vector3 lastInputPosition = trialStart.transform.position;
+            targetNumber = 1;
+            for (int i = 0; i < trial.settings.GetInt("nTargets"); i++)
+            {
+                targetNumber = i+1;
+                if (i % 2 == 0)
+                {
+                    trialStartScript.ColorObj(standbyGrey);
+                    trialTargetScript.ColorObj(targetGreen);
+                }
+                else
+                {
+                    trialStartScript.ColorObj(targetGreen);
+                    trialTargetScript.ColorObj(standbyGrey);
+                }
+                yield return new WaitUntil(() => (Vector3.Distance(lastInputPosition, controllerSphere.transform.position) > 0.1f));
+                yield return new WaitUntil(() => (OVRInput.GetDown(OVRInput.Button.One)));
+                lastInputPosition = rightHandAnchor.transform.position;
+                yield return null; // pause till next frame to not increment targetNumber on the same frame as Button.One is pressed
+            }
+        }
 
-        // Ensure input button is not fat fingered immediately before input is allowed
-        yield return new WaitUntil(() => (Vector3.Distance(trialStart.transform.position, controllerSphere.transform.position) > 0.1f));
-        yield return new WaitUntil(() => (OVRInput.GetDown(OVRInput.Button.One)));
-        controllerSphereScript.visible = false;
+        controllerSphereScript.Visible(false);
 
         trueInput = GetRelativePosition(trialSpace, rightHandAnchor);
         visualOffsetInput = GetRelativePosition(trialSpace, controllerSphere);
@@ -246,7 +258,7 @@ public class TaskRunner : MonoBehaviour
         trialProgress = "trialInput";
         trialInputTime = Time.time;
 
-        trialStartScript.visible = true;
+        trialStartScript.Visible(true);
         trialTargetScript.PositionAnchor(targetPos);
         trialTargetScript.ColorObj(standbyGrey);
         trialStartScript.ColorObj(startTeal);
@@ -255,36 +267,12 @@ public class TaskRunner : MonoBehaviour
         SaveResults(trial);
         yield return new WaitUntil(() => (Vector3.Distance(trialStart.transform.position, controllerSphere.transform.position) < 0.1f));
 
-
         trial.End();
     }
-    IEnumerator TrialMultiTargetCoroutine(Trial trial)
-    {
-        GameObject currentTarget
-        Debug.Log("target local: " + trialTarget.transform.localPosition);
 
-        trialProgress = "trialStarted";
-        trialStartedTime = Time.time;
-
-        trialStartScript.visible = false;
-        if (!(trial.settings.GetBool("controllerVisibleTrialStart")))
-        {
-            controllerSphereScript.visible = false;
-        }
-        yield return null;
-        controllerSphereScript.visualOffsetFromReference(new Vector3(
-            trial.settings.GetFloat("visualXOffset"), 
-            0, 
-            0),
-            trialSpace.transform);
-        trialTargetScript.ColorObj(targetGreen);
-
-        trial.End();
-    }
     // Update is called once per frame
     void Update()
     {
-        posControllerInTrialSpace = trialSpace.transform.InverseTransformPoint(rightHandAnchor.transform.position);
     }
     IEnumerator calibration2d()
     {
@@ -311,16 +299,20 @@ public class TaskRunner : MonoBehaviour
 
         if (trial.settings.GetBool("turnControllerVisibleMidpoint"))
         {
-            controllerSphereScript.visible = true;
+            controllerSphereScript.Visible(true);
         }
 
-        yield return new WaitForSeconds(trial.settings.GetFloat("controllerMidpointVisibleTime"));
+        for (int i = 0; i < trial.settings.GetInt("controllerMidpointVisibleFrames"); i++)
+        {
+            yield return null;
+        }
+        //yield return new WaitForSeconds(trial.settings.GetFloat("controllerMidpointVisibleTime"));
         trialProgress = "trialControlVisibilityOn";
         trialControlVisibilityOnTime = Time.time;
 
         if (trial.settings.GetBool("turnControllerVisibleMidpoint"))
         {
-            controllerSphereScript.visible = false;
+            controllerSphereScript.Visible(false);
         }
     }
 

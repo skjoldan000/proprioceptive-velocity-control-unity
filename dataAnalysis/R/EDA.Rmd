@@ -1,0 +1,87 @@
+---
+title: "EDA"
+author: "ESM"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggforce)
+```
+
+```{r}
+path <- "../../testData/"
+
+all_files <- list.files(path, recursive = TRUE)
+# all_files <- all_files %>% str_subset("")
+
+trials <- read_csv(paste0(path, all_files %>% str_subset("trial_results.csv"))) %>%
+  filter(calibration == FALSE)
+
+tracking <- read_csv(paste0(path, trials %>% pull(tracker2d_movement_location_0))) %>% 
+  select(-c(truepos_y, vispos_y)) %>% 
+  filter(!trialProgress %in% c("trialSetup", "trialInput")) %>% 
+  left_join(trials, by = "trialID")
+
+targetOut <- geom_circle(aes(x0 = 0, y0 = 0.4, r = 0.025), color = NA, fill = "lightgreen", alpha = .125)
+targetHome <- geom_circle(aes(x0 = 0, y0 = 0, r = 0.025), color = NA, fill = "lightgreen", alpha = .125)
+```
+
+blockNumber 3
+```{r}
+plot_endpoints <- trials %>% 
+  filter(blockNumber == 3) %>% 
+  ggplot(aes(x = trueInput.x, y = trueInput.z, color = factor(visualXOffset)))+
+  targetOut + 
+  geom_point() + 
+  coord_fixed(ratio = 1)
+
+plot_endpoints
+# plot_endpoints %>% ggsave(filename = "../figs/plot_endpoints.png", width = 6, height = 6)
+
+plot_tracking <- tracking %>% 
+  filter(blockNumber == 3) %>% 
+  filter(!(condition == "vispos" & time < trialControlVisibilityOffTime)) %>% 
+  mutate(
+    type = case_when(
+      condition == "truepos" ~ "true pos",
+      condition == "vispos" & controllerSphereVisible == TRUE ~ "vis feedback",
+      condition == "vispos" & controllerSphereVisible == FALSE ~ "implied pos",
+    )
+  ) %>% 
+  ggplot(aes(x = x, y = z, color = type, group = trialID))+
+  targetOut + 
+  geom_point(size = 1) + 
+  #geom_path(size = 1) +
+  coord_fixed(ratio = 1, xlim = c(-0.2, .2)) +
+  facet_wrap(~visualXOffset)
+  
+plot_tracking
+# plot_tracking %>% ggsave(filename = "../figs/plot_tracking.png",  width = 6, height = 6)
+# print("File save complete")
+```
+blockNumber 4
+```{r}
+plot_b4_endpoints <- tracking %>% 
+  filter(blockNumber == 4) %>% 
+  filter(aButtonDown == TRUE) %>%
+  ggplot(aes(x = truepos_x, y = truepos_z, color = targetNumber)) +
+  targetHome + 
+  targetOut + 
+  geom_point(size = 1) + 
+  coord_fixed(ratio = 1, xlim = c(-.2, .2))
+plot_b4_endpoints
+
+plot_b4_path <- tracking %>% 
+  filter(blockNumber == 4) %>% 
+  ggplot(aes(x = truepos_x, y = truepos_z, color = trialID)) +
+  targetHome + 
+  targetOut + 
+  geom_path(size = 1) + 
+  coord_fixed(ratio = 1, xlim = c(-.2, .2))
+plot_b4_path
+```
+

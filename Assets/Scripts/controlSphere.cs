@@ -19,11 +19,11 @@ public class ControlSphere : MonoBehaviour
     {
         obj.GetComponent<Renderer>().material = requestedColor;
     }
-    //public void VisibleObj(bool targetVisibility)
-    //{
-    //    visible = targetVisibility;
-    //    obj.SetActive(visible);
-    //}
+    public void Visible(bool targetVisibility)
+    {
+        visible = targetVisibility;
+        obj.SetActive(visible);
+    }
     public void visualOffsetFromReference(Vector3 requestedOffset, Transform referenceTransform)
     {
         transform.position = transform.position
@@ -35,8 +35,8 @@ public class ControlSphere : MonoBehaviour
     {
         transform.position = rightHandAnchor.transform.position;
     }
-    void Update()
-    {
-        obj.SetActive(visible);
-    }
+    //void Update()
+    //{
+    //    obj.SetActive(visible);
+    //}
 }

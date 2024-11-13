@@ -927,7 +927,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7839017981507438752, guid: 0a3b6392f04558844bd340e68ced1ff9, type: 3}
       propertyPath: m_Text
-      value: 
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7948667913022628418, guid: 0a3b6392f04558844bd340e68ced1ff9, type: 3}
       propertyPath: m_AnchorMax.y
@@ -1488,10 +1488,10 @@ Light:
   m_InnerSpotAngle: 21.80208
   m_CookieSize: 10
   m_Shadows:
-    m_Type: 1
+    m_Type: 0
     m_Resolution: -1
     m_CustomResolution: -1
-    m_Strength: 1
+    m_Strength: 0.748
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
@@ -2537,6 +2537,7 @@ MonoBehaviour:
   controllerPurple: {fileID: 2100000, guid: bc518b1321989124db9af00dd217ff59, type: 2}
   trialProgress: 
   trialID: 
+  targetNumber: 0
   trialCounter: {fileID: 1779334755}
 --- !u!114 &1287761646
 MonoBehaviour:
