@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.width=16, fig.height=8)
 
 library(tidyverse)
 library(ggforce)
@@ -16,7 +17,7 @@ library(ggforce)
 path <- "../../testData/"
 
 all_files <- list.files(path, recursive = TRUE)
-# all_files <- all_files %>% str_subset("")
+all_files <- all_files %>% str_subset("mark")
 
 trials <- read_csv(paste0(path, all_files %>% str_subset("trial_results.csv"))) %>%
   filter(calibration == FALSE)
@@ -29,6 +30,23 @@ tracking <- read_csv(paste0(path, trials %>% pull(tracker2d_movement_location_0)
 targetOut <- geom_circle(aes(x0 = 0, y0 = 0.4, r = 0.025), color = NA, fill = "lightgreen", alpha = .125)
 targetHome <- geom_circle(aes(x0 = 0, y0 = 0, r = 0.025), color = NA, fill = "lightgreen", alpha = .125)
 ```
+```{r}
+plot_endpoints <- trials %>% 
+  filter(blockNumber %in% c(1,2)) %>% 
+  ggplot(aes(x = trueInput.x, y = trueInput.z, color = factor(blockNumber)))+
+  targetOut + 
+  geom_point(size = 3) + 
+  stat_ellipse(size = 2) +
+  stat_summary(aes(x = trueInput.x, y = trueInput.z, color = factor(blockNumber)), 
+               fun = mean, geom = "point", size = 5, shape = 17) + 
+  coord_fixed(ratio = 1)
+
+plot_endpoints
+
+
+```
+
+
 
 blockNumber 3
 ```{r}
@@ -36,12 +54,26 @@ plot_endpoints <- trials %>%
   filter(blockNumber == 3) %>% 
   ggplot(aes(x = trueInput.x, y = trueInput.z, color = factor(visualXOffset)))+
   targetOut + 
-  geom_point() + 
+  geom_point(size = 3) + 
+  stat_ellipse(level = 0.95, size = 2) +
+  # stat_summary_2d(fun = mean) +
   coord_fixed(ratio = 1)
 
 plot_endpoints
+
+plot_endpoints_boxplot <- trials %>% 
+  filter(blockNumber == 3) %>%
+  ggplot(aes(x = trueInput.x, y = 0, color = factor(visualXOffset)))+
+  
 # plot_endpoints %>% ggsave(filename = "../figs/plot_endpoints.png", width = 6, height = 6)
 
+
+# tracking <- tracking %>%
+#   pivot_longer(
+#     cols = c(truepos_x, truepos_z, vispos_x, vispos_z),  # The columns to pivot
+#     names_to = c("condition", ".value"),                 # Split into 'condition' and the value columns ('x' and 'z')
+#     names_sep = "_"                                      # Use '_' to separate 'truepos'/'vispos' from 'x'/'z'
+#   )
 plot_tracking <- tracking %>% 
   filter(blockNumber == 3) %>% 
   filter(!(condition == "vispos" & time < trialControlVisibilityOffTime)) %>% 
@@ -52,10 +84,11 @@ plot_tracking <- tracking %>%
       condition == "vispos" & controllerSphereVisible == FALSE ~ "implied pos",
     )
   ) %>% 
-  ggplot(aes(x = x, y = z, color = type, group = trialID))+
+  arrange(type) %>% 
+  ggplot(aes(x = x, y = z, color = type, group = interaction(trialID, type)))+
   targetOut + 
-  geom_point(size = 1) + 
-  #geom_path(size = 1) +
+  # geom_point(size = 1) + 
+  geom_path(size = 1) +
   coord_fixed(ratio = 1, xlim = c(-0.2, .2)) +
   facet_wrap(~visualXOffset)
   
@@ -68,7 +101,7 @@ blockNumber 4
 plot_b4_endpoints <- tracking %>% 
   filter(blockNumber == 4) %>% 
   filter(aButtonDown == TRUE) %>%
-  ggplot(aes(x = truepos_x, y = truepos_z, color = targetNumber)) +
+  ggplot(aes(x = truepos_x, y = truepos_z, color = factor(targetNumber))) +
   targetHome + 
   targetOut + 
   geom_point(size = 1) + 
@@ -81,7 +114,8 @@ plot_b4_path <- tracking %>%
   targetHome + 
   targetOut + 
   geom_path(size = 1) + 
-  coord_fixed(ratio = 1, xlim = c(-.2, .2))
+  coord_fixed(ratio = 1, xlim = c(-.2, .2))+
+  facet_wrap(~trialID)
 plot_b4_path
 ```
 

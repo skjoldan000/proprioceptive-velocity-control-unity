@@ -1,13 +1,14 @@
 {
     "runBlocks": [4],
-    "numRepeats": 5,
+    "numRepeats": 3,
     "nDims": 2,
     "nTargets": 1,
+    "nTargetsb4": 5,
     "vibrationPans": [-1, 0, 1, 2],
     "calibration": false, 
     "controllerVisibleTrialStart": true,
     "turnControllerVisibleMidpoint": false,
-    "controllerMidpointVisibleFrames": 5,
+    "controllerMidpointVisibleFrames": 7,
     "visualXOffset": 0,
     "visualXOffsets": [-0.025, -0.0125, 0, 0.0125, 0.025],
 

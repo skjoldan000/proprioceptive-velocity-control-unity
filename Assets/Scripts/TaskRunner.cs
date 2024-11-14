@@ -217,7 +217,7 @@ public class TaskRunner : MonoBehaviour
             trialTargetScript.ColorObj(targetGreen);
             // Trial is now initiated
             // Controller visibility
-            yield return new WaitUntil(() =>(GetRelativePosition(trialSpace, rightHandAnchor).z > .1));
+            yield return new WaitUntil(() =>(GetRelativePosition(trialSpace.transform, rightHandAnchor.transform).z > .1));
             StartCoroutine(ControllerVisibility(trial));
 
             // Ensure input button is not fat fingered immediately before input is allowed
@@ -228,32 +228,43 @@ public class TaskRunner : MonoBehaviour
         if (trial.settings.GetInt("nTargets") > 1)
         {
             controllerSphereScript.Visible(trial.settings.GetBool("controllerVisibleTrialStart"));
-            Vector3 lastInputPosition = trialStart.transform.position;
+            Transform lastInputTransform = trialStart.transform;
             targetNumber = 1;
             for (int i = 0; i < trial.settings.GetInt("nTargets"); i++)
             {
+                controllerSphereScript.ResetVisualOffset(); 
                 targetNumber = i+1;
                 if (i % 2 == 0)
                 {
                     trialStartScript.ColorObj(standbyGrey);
                     trialTargetScript.ColorObj(targetGreen);
                 }
-                else
+                else if (i % 2 == 1)
                 {
                     trialStartScript.ColorObj(targetGreen);
                     trialTargetScript.ColorObj(standbyGrey);
                 }
-                yield return new WaitUntil(() => (Vector3.Distance(lastInputPosition, controllerSphere.transform.position) > 0.1f));
+                if (i == 0 | i == 4)
+                yield return new WaitUntil(() =>(GetRelativePosition(lastInputTransform, rightHandAnchor.transform).z > .1));
+                {
+                    StartCoroutine(ControllerVisibility(trial));
+                    controllerSphereScript.visualOffsetFromReference(new Vector3(
+                        trial.settings.GetFloat("visualXOffset"), 
+                        0, 
+                        0),
+                        trialSpace.transform);
+                }
+                yield return new WaitUntil(() => (Vector3.Distance(lastInputTransform.position, controllerSphere.transform.position) > 0.1f));
                 yield return new WaitUntil(() => (OVRInput.GetDown(OVRInput.Button.One)));
-                lastInputPosition = rightHandAnchor.transform.position;
+                lastInputTransform.position = rightHandAnchor.transform.position;
                 yield return null; // pause till next frame to not increment targetNumber on the same frame as Button.One is pressed
             }
         }
 
         controllerSphereScript.Visible(false);
 
-        trueInput = GetRelativePosition(trialSpace, rightHandAnchor);
-        visualOffsetInput = GetRelativePosition(trialSpace, controllerSphere);
+        trueInput = GetRelativePosition(trialSpace.transform, rightHandAnchor.transform);
+        visualOffsetInput = GetRelativePosition(trialSpace.transform, controllerSphere.transform);
 
         trialProgress = "trialInput";
         trialInputTime = Time.time;
@@ -294,21 +305,19 @@ public class TaskRunner : MonoBehaviour
     }
     IEnumerator ControllerVisibility(Trial trial)
     {
-        trialProgress = "trialControlVisibilityOff";
-        trialControlVisibilityOffTime = Time.time;
 
-        if (trial.settings.GetBool("turnControllerVisibleMidpoint"))
-        {
-            controllerSphereScript.Visible(true);
-        }
+
+        controllerSphereScript.Visible(trial.settings.GetBool("turnControllerVisibleMidpoint"));
+
+        trialProgress = "trialControlVisibilityOn";
+        trialControlVisibilityOnTime = Time.time;
 
         for (int i = 0; i < trial.settings.GetInt("controllerMidpointVisibleFrames"); i++)
         {
             yield return null;
         }
-        //yield return new WaitForSeconds(trial.settings.GetFloat("controllerMidpointVisibleTime"));
-        trialProgress = "trialControlVisibilityOn";
-        trialControlVisibilityOnTime = Time.time;
+        trialProgress = "trialControlVisibilityOff";
+        trialControlVisibilityOffTime = Time.time;
 
         if (trial.settings.GetBool("turnControllerVisibleMidpoint"))
         {
@@ -343,8 +352,8 @@ public class TaskRunner : MonoBehaviour
         Session.instance.CurrentTrial.result["trialControlVisibilityOnTime"] = trialControlVisibilityOnTime;
         Session.instance.CurrentTrial.result["trialInputTime"] = trialInputTime;
     }
-    private Vector3 GetRelativePosition(GameObject reference, GameObject target)
+    private Vector3 GetRelativePosition(Transform reference, Transform target)
     {
-        return reference.transform.InverseTransformPoint(target.transform.position);
+        return reference.InverseTransformPoint(target.position);
     }
 }

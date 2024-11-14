@@ -73,11 +73,16 @@ public class ExperimentConstructorScript : MonoBehaviour
         {
             Block block4 = uxfSession.CreateBlock();
             for (int i = 0; i < numRepeats; i++)
+            foreach (float visualXOffset in visualXOffsets)
             {
-                Trial newTrial = block4.CreateTrial();
-                newTrial.settings.SetValue("blockNumber", blockNumber);
-                newTrial.settings.SetValue("controllerVisibleTrialStart", false);
-                newTrial.settings.SetValue("nTargets", 5);
+                {
+                    Trial newTrial = block4.CreateTrial();
+                    newTrial.settings.SetValue("blockNumber", blockNumber);
+                    newTrial.settings.SetValue("controllerVisibleTrialStart", false);
+                    newTrial.settings.SetValue("nTargets", uxfSession.settings.GetInt("nTargetsb4"));
+                    newTrial.settings.SetValue("visualXOffset", visualXOffset);
+                    newTrial.settings.SetValue("turnControllerVisibleMidpoint", true);
+                }
             }
         }
     }
