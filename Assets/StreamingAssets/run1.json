@@ -1,19 +1,23 @@
 {
-    "runBlocks": [4],
-    "numRepeats": 3,
-    "nDims": 2,
+    "runBlocks": [1,2,3],
+    "numRepeats": 10,
+    "nDims": 1,
     "nTargets": 1,
-    "nTargetsb4": 5,
+    "nTargetsb4": 17,
     "vibrationPans": [-1, 0, 1, 2],
     "calibration": false, 
     "controllerVisibleTrialStart": true,
     "turnControllerVisibleMidpoint": false,
-    "controllerMidpointVisibleFrames": 7,
+    "controllerMidpointVisibleFrames": 5,
+    "controllerMidpointOnStart": 0.15,
     "visualXOffset": 0,
-    "visualXOffsets": [-0.025, -0.0125, 0, 0.0125, 0.025],
+    "visualZOffset": 0,
+    "visualXOffsets": [-0.025, 0, 0.025],
+    "visualZOffsets": [-0.025, 0, 0.025],
+    "trialOrientation": "forwardBack",
+    "applyRandomRotation": true,
+    "randomRotationRange": [-10, 10], 
+    "vibrationPan": [-1, 0, 1, 2],
 
-    "blockInstructions": 
-    {
-        "1":"Calibration instructions: \nGrab both controllers.\nPress the GREEN button on right controller to start calibration."
-    }
+    "blockInstructions": "Instructions not set"
 }

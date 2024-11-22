@@ -9,12 +9,15 @@ namespace UXF
     public class RelativePositionRotationTracker : Tracker
     {
         public override string MeasurementDescriptor => "movement";
-        public override IEnumerable<string> CustomHeader => new string[] {"trialID", "trialProgress", "truepos_x", "truepos_y", "truepos_z", "vispos_x", "vispos_y", "vispos_z", "controllerSphereVisible", "aButtonDown", "targetNumber"};
+        public override IEnumerable<string> CustomHeader => new string[] {"trialID", "trialProgress", "truepos.x", "truepos.y", "truepos.z", "vispos.x", "vispos.y", "vispos.z", "controllerSphereVisible", "aButtonDown", "targetNumber", "vibBoth", "vibLeft", "vibRight"};
         public TaskRunner taskRunner;
         public GameObject trialSpace;
         public GameObject controllerSphere;
         private ControlSphere controllerSphereScript;
         public GameObject rightHandAnchor;
+        public AudioSource vibBoth;
+        public AudioSource vibLeft;
+        public AudioSource vibRight;
 
         void Start()
         {
@@ -32,15 +35,18 @@ namespace UXF
             {
                 ("trialID", taskRunner.trialID),
                 ("trialProgress", taskRunner.trialProgress),
-                ("truepos_x", truePosition.x),
-                ("truepos_y", truePosition.y),
-                ("truepos_z", truePosition.z),
-                ("vispos_x", visualPosition.x),
-                ("vispos_y", visualPosition.y),
-                ("vispos_z", visualPosition.z),
+                ("truepos.x", truePosition.x),
+                ("truepos.y", truePosition.y),
+                ("truepos.z", truePosition.z),
+                ("vispos.x", visualPosition.x),
+                ("vispos.y", visualPosition.y),
+                ("vispos.z", visualPosition.z),
                 ("controllerSphereVisible", controllerSphereScript.visible),
                 ("aButtonDown", OVRInput.GetDown(OVRInput.Button.One)),
-                ("targetNumber", taskRunner.targetNumber)
+                ("targetNumber", taskRunner.targetNumber),
+                ("vibBoth", vibBoth.isPlaying),
+                ("vibLeft", vibLeft.isPlaying),
+                ("vibRight", vibRight.isPlaying)
             };
 
 

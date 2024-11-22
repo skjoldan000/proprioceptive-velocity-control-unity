@@ -6,9 +6,13 @@ public class ControlSphere : MonoBehaviour
     private GameObject obj;
     public GameObject rightHandAnchor;
     public bool visible = true;
-    void Start()
+    void Awake()
     {
-        obj = transform.Find("Sphere").gameObject;
+        obj = transform.Find("Sphere")?.gameObject;
+        if (obj == null)
+        {
+            Debug.LogError("Sphere child GameObject is missing.");
+        }
     }
 
     public void PositionAnchor(Vector3 requestedPosition)
@@ -35,8 +39,4 @@ public class ControlSphere : MonoBehaviour
     {
         transform.position = rightHandAnchor.transform.position;
     }
-    //void Update()
-    //{
-    //    obj.SetActive(visible);
-    //}
 }
