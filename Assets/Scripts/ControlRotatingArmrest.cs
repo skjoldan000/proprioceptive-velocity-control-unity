@@ -8,7 +8,10 @@ public class ControlRotatingArmrest : MonoBehaviour
 {
     public GameObject handAnchor;
     public GameObject controllerAnchor;
-    public GameObject a_button;
+    public GameObject buttonA;
+    public GameObject buttonAoffset;
+    public GameObject buttonB;
+    public GameObject buttonBoffset;
     public GameObject gripModel;
     public GameObject rotatingArmSpace;
     public GameObject rotatingArm;
@@ -48,7 +51,7 @@ public class ControlRotatingArmrest : MonoBehaviour
     {
         if (calibrationComplete)
         {
-            controllerAnchor.SetActive(true);
+            controllerAnchor.SetActive(false);
             offsetControllerAnchor.SetActive(true);
 
             angleStartToController = CalculateAngleDirectional(positionToOffsetFrom, handAnchor, rotatingArm);
@@ -80,7 +83,7 @@ public class ControlRotatingArmrest : MonoBehaviour
         Debug.LogWarning("Calibration started");
         calibrationComplete = false;
         GameObject instructionsArrow1 = generateInstructions.InstantiateArrowText(
-            a_button,
+            buttonA,
             "Move armrest to the left\nThen press A to start calibration",
             true
         );
@@ -114,7 +117,7 @@ public class ControlRotatingArmrest : MonoBehaviour
         pointsForCalibration.Add(handAnchor.transform.position);
 
         GameObject instructionsArrow = generateInstructions.InstantiateArrowText(
-            a_button,
+            buttonA,
             "Move " + angleToCalibrateWith + " to the right",
             true
         );

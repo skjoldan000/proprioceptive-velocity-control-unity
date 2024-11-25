@@ -39,7 +39,9 @@ public class TaskRunner : MonoBehaviour
     public GameObject leftControllerAnchor;
     public GameObject leftHandAnchor;
     public GameObject buttonA;
+    public GameObject buttonAoffset;
     public GameObject buttonB;
+    public GameObject buttonBoffset;
     public GameObject tracker2d;
     public GameObject tracker1d;
     public GameObject RotatingArm;
