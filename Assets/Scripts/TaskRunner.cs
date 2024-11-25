@@ -11,7 +11,7 @@ public class TaskRunner : MonoBehaviour
 {
     // Toggles
     [SerializeField]private bool showDebugSphere = false;
-    [SerializeField]private bool showConsole = false;
+    [SerializeField]private bool showConsole = true;
     [SerializeField]private bool debugAudio = false;
 
     // Objects and attached scripts

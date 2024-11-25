@@ -6186,7 +6186,7 @@ MonoBehaviour:
   rotatingArmSpace: {fileID: 767063342}
   rotatingArm: {fileID: 1987174301}
   rotatingArmObj: {fileID: 1987174300}
-  angleMultiplier: 1.1
+  angleMultiplier: 1
   positionToOffsetFrom: {fileID: 1618512185}
   rotationToOffsetFrom: {fileID: 407079532}
   positionProjected: {fileID: 1139319535}
@@ -6201,7 +6201,7 @@ MonoBehaviour:
   angleStartToOffsetController: 0
   trackedDesk: {fileID: 1034365534}
   savePointsForCalibrationComplete: 0
-  showDebugSpheres: 1
+  showDebugSpheres: 0
 --- !u!1 &2013080427
 GameObject:
   m_ObjectHideFlags: 0

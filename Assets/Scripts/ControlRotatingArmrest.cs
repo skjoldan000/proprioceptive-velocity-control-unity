@@ -48,7 +48,7 @@ public class ControlRotatingArmrest : MonoBehaviour
     {
         if (calibrationComplete)
         {
-            controllerAnchor.SetActive(false);
+            controllerAnchor.SetActive(true);
             offsetControllerAnchor.SetActive(true);
 
             angleStartToController = CalculateAngleDirectional(positionToOffsetFrom, handAnchor, rotatingArm);
@@ -60,6 +60,7 @@ public class ControlRotatingArmrest : MonoBehaviour
             //rotatingArm.transform.forward = dirToStart;
 
             rotatingArm.transform.forward = dirToOffsetController;
+            rotationProjected.transform.forward = dirToController;
         }
         else
         {
