@@ -1,0 +1,23 @@
+{
+    "runBlocks": [1,2,3],
+    "numRepeats": 10,
+    "nDims": 2,
+    "nTargets": 1,
+    "nTargetsb4": 17,
+    "vibrationPans": [-1, 0, 1, 2],
+    "calibration": false, 
+    "controllerVisibleTrialStart": true,
+    "turnControllerVisibleMidpoint": false,
+    "controllerMidpointVisibleFrames": 5,
+    "controllerMidpointOnStart": 0.15,
+    "visualXOffset": 0,
+    "visualZOffset": 0,
+    "visualXOffsets": [-0.025, 0, 0.025],
+    "visualZOffsets": [-0.025, 0, 0.025],
+    "trialOrientation": "forwardBack",
+    "applyRandomRotation": true,
+    "randomRotationRange": [-10, 10], 
+    "vibrationPan": [-1, 0, 1, 2],
+
+    "blockInstructions": "Instructions not set"
+}
