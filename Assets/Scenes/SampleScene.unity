@@ -3994,7 +3994,9 @@ MonoBehaviour:
   leftControllerAnchor: {fileID: 41098702}
   leftHandAnchor: {fileID: 458555231}
   buttonA: {fileID: 2097878293}
+  buttonAoffset: {fileID: 1978883151}
   buttonB: {fileID: 2078810707}
+  buttonBoffset: {fileID: 340297622}
   tracker2d: {fileID: 1114987682}
   tracker1d: {fileID: 440877198}
   RotatingArm: {fileID: 1987174301}
@@ -6181,7 +6183,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   handAnchor: {fileID: 1805538323}
   controllerAnchor: {fileID: 50594170}
-  a_button: {fileID: 1978883151}
+  buttonA: {fileID: 2097878293}
+  buttonAoffset: {fileID: 1978883151}
+  buttonB: {fileID: 2078810707}
+  buttonBoffset: {fileID: 340297622}
   gripModel: {fileID: 1987174299}
   rotatingArmSpace: {fileID: 767063342}
   rotatingArm: {fileID: 1987174301}
