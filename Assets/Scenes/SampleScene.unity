@@ -3974,9 +3974,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 084b2290cd4ac7a4a9ff513face161ec, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  showDebugSpheresRotation: 0
   showDebugSphere: 0
   showConsole: 0
   debugAudio: 0
+  angleToCalibrateWith: 75
   blockInstructionsText: {fileID: 89409138}
   generateInstructions: {fileID: 1372467475}
   trialSpaceAll: {fileID: 2124405530}
@@ -4002,12 +4004,24 @@ MonoBehaviour:
   RotatingArm: {fileID: 1987174301}
   AudioLatencyTester: {fileID: 1272848422}
   VRConsole: {fileID: 2013080427}
+  gripModel: {fileID: 1987174299}
+  rotatingArmSpace: {fileID: 767063342}
+  rotatingArm: {fileID: 1987174301}
+  rotatingArmObj: {fileID: 1987174300}
+  positionToOffsetFrom: {fileID: 1618512185}
+  rotationToOffsetFrom: {fileID: 0}
+  positionProjected: {fileID: 1139319535}
+  rotationProjected: {fileID: 36107079}
+  positionOffsetProjected: {fileID: 1560676781}
+  offsetControllerAnchor: {fileID: 1416010015}
   targetGreen: {fileID: 2100000, guid: 40ab6d2082389d14c9d17ffff20465ac, type: 2}
   startTeal: {fileID: 2100000, guid: 75d175bdfd3c8e046b4b4ae287ff09ef, type: 2}
   activeBlue: {fileID: 2100000, guid: 1dc374353c7cd184b9f4ef1ab7fcbe40, type: 2}
   readyYellow: {fileID: 2100000, guid: dfe641ddc80348a41a4d348575221d1b, type: 2}
   standbyGrey: {fileID: 2100000, guid: c2e1a1fea81f4d845a9155a010c7ec79, type: 2}
   controllerPurple: {fileID: 2100000, guid: bc518b1321989124db9af00dd217ff59, type: 2}
+  calibrationArmrestComplete: 0
+  savePointsForCalibrationComplete: 0
   trialProgress: 
   trialID: 
   targetNumber: 0
@@ -4017,6 +4031,9 @@ MonoBehaviour:
   vibrationVolume: 0.7
   trialCounter: {fileID: 1779334755}
   trialSpaceRotationY: 0
+  angleMultiplier: 1.1
+  angleStartToController: 0
+  angleStartToOffsetController: 0
 --- !u!114 &1287761646
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6176,7 +6193,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1987174301}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 557195f35050c2d429bda97116807de5, type: 3}
   m_Name: 
