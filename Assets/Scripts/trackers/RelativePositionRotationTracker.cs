@@ -9,7 +9,7 @@ namespace UXF
     public class RelativePositionRotationTracker : Tracker
     {
         public override string MeasurementDescriptor => "movement";
-        public override IEnumerable<string> CustomHeader => new string[] {"trialID", "trialProgress", "truepos.x", "truepos.y", "truepos.z", "vispos.x", "vispos.y", "vispos.z", "controllerSphereVisible", "aButtonDown", "targetNumber", "vibBoth", "vibLeft", "vibRight"};
+        public override IEnumerable<string> CustomHeader => new string[] {"trialID", "trialProgress", "truepos.x", "truepos.y", "truepos.z", "vispos.x", "vispos.y", "vispos.z", "controllerSphereVisible", "aButtonDown", "targetNumber", "vibrationTriggered", "vibBoth", "vibLeft", "vibRight", "arduinoListenerStopwatch", "frameStartToAudioStartPre", "frameStartToAudioStartPost", "frameStartToAudioStopPre", "frameStartToAudioStopPost"};
         public TaskRunner taskRunner;
         public GameObject trialSpace;
         public GameObject controllerSphere;
@@ -18,6 +18,8 @@ namespace UXF
         public AudioSource vibBoth;
         public AudioSource vibLeft;
         public AudioSource vibRight;
+        public ArduinoReciever arduinoReciever;
+        public AudioLatencyTester audioLatencyTester;
 
         void Start()
         {
@@ -44,9 +46,15 @@ namespace UXF
                 ("controllerSphereVisible", controllerSphereScript.visible),
                 ("aButtonDown", OVRInput.GetDown(OVRInput.Button.One)),
                 ("targetNumber", taskRunner.targetNumber),
+                ("vibrationTriggered", taskRunner.vibrationTriggered),
                 ("vibBoth", vibBoth.isPlaying),
                 ("vibLeft", vibLeft.isPlaying),
-                ("vibRight", vibRight.isPlaying)
+                ("vibRight", vibRight.isPlaying),
+                ("arduinoListenerStopwatch", arduinoReciever.alignedStopwatch),
+                ("frameStartToAudioStartPre", audioLatencyTester.frameStartToAudioStartPre),
+                ("frameStartToAudioStartPost", audioLatencyTester.frameStartToAudioStartPost),
+                ("frameStartToAudioStopPre", audioLatencyTester.frameStartToAudioStopPre),
+                ("frameStartToAudioStopPost", audioLatencyTester.frameStartToAudioStopPost)
             };
 
 

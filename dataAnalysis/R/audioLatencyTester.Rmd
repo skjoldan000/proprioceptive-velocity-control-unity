@@ -1,0 +1,469 @@
+---
+title: "audioLatencyTest"
+author: "ESM"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(readxl)
+library(zoo)
+
+```
+
+```{r}
+df <- read_excel("C:/Users/erik-/Desktop/audioLatencyTest/Book2.xlsx")
+df <- df %>% 
+  mutate(
+    on_diff = led_on - s_on,
+    led_off_adj = led_off+1,
+    off_diff = led_off_adj - s_off
+    )
+
+df <- df %>% 
+  select(on_diff, off_diff) %>% 
+  pivot_longer(c(on_diff, off_diff), names_to = "cond", values_to = "values")
+
+df %>% 
+  ggplot(aes(x = values, fill = cond))+
+  geom_bar(position = position_dodge())
+
+df %>% 
+  mutate(ms = values * 1000/240) %>% 
+  ggplot(aes(y = ms, x = cond, color = cond ))+
+  geom_boxplot()
+  
+
+df %>% 
+  group_by(cond) %>% 
+  summarise(
+    mean = mean(values),
+    sd = sd(values)
+  )
+
+
+
+```
+
+```{r}
+full_path <- "C:/Users/erik-/Desktop/proprioceptive-velocity-control-unity/testData/"
+file <- "audtest1|audtest2"
+sub_path <- list.files(full_path, recursive = TRUE) %>% 
+  str_subset("trial_results") %>% 
+  str_subset(file)
+
+path <- paste0(full_path, sub_path)
+
+df <- read_csv(path)
+
+ard <- read_csv(paste0(full_path, df %>% filter(trial_num == 1) %>% pull(arduino_data_location_0)))
+track <- read_csv(paste0(full_path, df %>% filter(trial_num == 1) %>% pull(tracker2d_movement_location_0)))
+
+ard <- ard %>% left_join(track %>% select(time, trialID, vibBoth, targetNumber), by = c("time"))
+
+ard %>% filter(frequency < 500)
+```
+
+
+```{r}
+turn_on <- ard %>%
+  filter(vibBoth == TRUE) %>% 
+  group_by(trialID, targetNumber) %>% 
+  mutate(
+    micros = micros - first(micros),
+    sigamp = if_else(signalAmplitude > 5, 1, 0)) %>% 
+  filter(sigamp == 1) %>% 
+  summarise(
+    first = (first(micros)/1000) - 4 # Audio coroutine is called 4 ms into frame
+  ) %>% 
+  filter(first < 250 & first > 50)
+
+turn_on %>% 
+  summarise(
+    mean = mean(first),
+    sd = sd(first)
+  )
+turn_on %>% 
+  ggplot(aes(x=first, color = trialID))+
+  geom_boxplot()
+
+turn_off <- ard %>% 
+  arrange(desc(row_number())) %>% 
+  group_by(trialID, targetNumber) %>% 
+  mutate(
+    sigamp = if_else(signalAmplitude > 5, 1, 0)
+  ) %>% 
+  filter(sigamp == 1) %>% 
+  mutate(
+    micros = abs(micros - first(micros))
+  ) %>% 
+  filter(vibBoth == FALSE) %>% 
+  summarise(
+    last = (last(micros)/1000) - 4
+  )  %>% 
+  filter(last < 250 & last > 50)
+
+turn_off %>% 
+  summarise(
+    mean = mean(last),
+    sd = sd(last)
+  )
+turn_off %>% 
+  ggplot(aes(x=last, color = trialID))+
+  geom_boxplot()
+
+```
+
+```{r}
+full_path <- "C:/Users/erik-/Desktop/proprioceptive-velocity-control-unity/testData/"
+file <- "audtest5"
+sub_path <- list.files(full_path, recursive = TRUE) %>% 
+  str_subset("trial_results") %>% 
+  str_subset(file)
+
+path <- paste0(full_path, sub_path)
+
+df <- read_csv(path)
+
+ard <- read_csv(paste0(full_path, df %>% filter(trial_num == 1) %>% pull(arduino_data_location_0)))
+track <- read_csv(paste0(full_path, df %>% filter(trial_num == 1) %>% pull(tracker2d_movement_location_0)))
+
+ard <- ard %>% left_join(track %>% select(time, trialID, vibBoth, targetNumber), by = c("time"))
+
+ard %>% 
+  filter(vibBoth == TRUE) %>% 
+  group_by(targetNumber) %>% 
+  mutate(
+    dur = (last(micros) - first(micros)) / 1000
+  ) %>% 
+  summarise(dur = dur) %>% 
+  ggplot(aes(x=dur)) +
+  geom_boxplot()
+
+```
+
+```{r}
+turn_on_usb <- ard %>% 
+  filter(vibBoth == TRUE) %>%
+  group_by(targetNumber) %>%
+  mutate(
+    micros = micros - first(micros)
+  ) %>%
+  filter(vibrationOn == TRUE) %>% 
+  summarise(
+    first = first(micros) / 1000
+  ) %>% 
+  filter(first > 1 & first < 25)
+
+turn_off_usb <- ard %>% 
+  arrange(desc(row_number())) %>%
+  filter(vibrationOn == TRUE) %>% 
+  group_by(targetNumber) %>% 
+  filter(vibBoth == FALSE) %>% 
+  mutate(
+    micros = abs(micros - last(micros))
+  ) %>%
+  summarise(
+    last = last(micros)/1000
+  ) %>% 
+  filter(last > 1 & last < 25)
+
+
+turn_on_usb %>% 
+  summarise(
+    mean = mean(first),
+    sd = sd(first)
+  )
+turn_on_usb %>% 
+  ggplot(aes(x=first))+
+  geom_boxplot()
+
+turn_on_usb %>% 
+  ggplot(aes(x=targetNumber, y = first))+
+  geom_point()
+
+##
+
+```
+
+```{r}
+turn_on <- ard %>%
+  filter(vibrationOn == TRUE) %>% 
+  group_by(trialID, targetNumber) %>% 
+  mutate(
+    micros = micros - first(micros),
+    sigamp = if_else(signalAmplitude > 5, 1, 0)) %>% 
+  filter(sigamp == 1) %>% 
+  summarise(
+    first = (first(micros)/1000) # Audio coroutine is called 4 ms into frame
+  ) %>% 
+  filter(first < 250 & first > 50)
+
+turn_on %>% 
+  summarise(
+    mean = mean(first),
+    sd = sd(first)
+  )
+turn_on %>% 
+  ggplot(aes(x=first, color = trialID))+
+  geom_boxplot()
+
+turn_off <- ard %>% 
+  arrange(desc(row_number())) %>% 
+  group_by(trialID, targetNumber) %>% 
+  mutate(
+    sigamp = if_else(signalAmplitude > 5, 1, 0)
+  ) %>% 
+  filter(sigamp == 1) %>% 
+  mutate(
+    micros = abs(micros - first(micros))
+  ) %>% 
+  filter(vibrationOn == FALSE) %>% 
+  summarise(
+    last = (last(micros)/1000)
+  )  %>% 
+  filter(last < 250 & last > 50)
+
+turn_off %>% 
+  summarise(
+    mean = mean(last),
+    sd = sd(last)
+  )
+turn_off %>% 
+  ggplot(aes(x=last, color = trialID))+
+  geom_boxplot()
+##
+turn_on <- ard %>%
+  filter(vibBoth == TRUE) %>% 
+  group_by(trialID, targetNumber) %>% 
+  mutate(
+    micros = micros - first(micros),
+    sigamp = if_else(signalAmplitude > 5, 1, 0)) %>% 
+  filter(sigamp == 1) %>% 
+  summarise(
+    first = (first(micros)/1000) # Audio coroutine is called 4 ms into frame
+  ) %>% 
+  filter(first < 250 & first > 50)
+
+turn_on %>% 
+  summarise(
+    mean = mean(first),
+    sd = sd(first)
+  )
+turn_on %>% 
+  ggplot(aes(x=first, color = trialID))+
+  geom_boxplot()
+
+turn_off <- ard %>% 
+  arrange(desc(row_number())) %>% 
+  group_by(trialID, targetNumber) %>% 
+  mutate(
+    sigamp = if_else(signalAmplitude > 5, 1, 0)
+  ) %>% 
+  filter(sigamp == 1) %>% 
+  mutate(
+    micros = abs(micros - first(micros))
+  ) %>% 
+  filter(vibBoth == FALSE) %>% 
+  summarise(
+    last = (last(micros)/1000)
+  )  %>% 
+  filter(last < 250 & last > 50)
+
+turn_off %>% 
+  summarise(
+    mean = mean(last),
+    sd = sd(last)
+  )
+turn_off %>% 
+  ggplot(aes(x=last, color = trialID))+
+  geom_boxplot()
+```
+vib test
+```{r}
+full_path <- "C:/Users/erik-/Desktop/proprioceptive-velocity-control-unity/testData/"
+file <- "vibtest4"
+sub_path <- list.files(full_path, recursive = TRUE) %>% 
+  str_subset("trial_results") %>% 
+  str_subset(file)
+
+path <- paste0(full_path, sub_path)
+
+df <- read_csv(path)
+
+ard2 <- read_csv(paste0(full_path, df %>% filter(trial_num == 1) %>% pull(arduino_data_location_0)))
+track <- read_csv(paste0(full_path, df %>% filter(trial_num == 1) %>% pull(tracker2d_movement_location_0)))
+
+ard2 <- ard2 %>% left_join(track %>% select(time, trialID, vibLeft, targetNumber, frameStartToAudioStartPre, frameStartToAudioStartPost, frameStartToAudioStopPre, frameStartToAudioStopPost), by = c("time"))
+
+```
+
+```{r}
+vibTreshold <- 0.1
+azOutlierDect <- 0.05
+
+on_delay <- ard2 %>% 
+  group_by(targetNumber) %>% 
+  filter(vibLeft == TRUE) %>% 
+  mutate(
+    time = time - first(time)
+  ) %>% 
+  mutate(
+    sent = time*1000 - frameStartToAudioStartPre,
+    delay = sent + stopwatch
+  ) %>% 
+  mutate(
+    az_lag = az - lag(az, default = NULL),
+    az_lead = az - lead(az, default = NULL),
+    az_outlier = if_else((abs(az_lag) > azOutlierDect) & (abs(az_lead) > azOutlierDect), 1, 0)
+  ) %>%
+  mutate(
+    az2 = az - mean(az[1:15][az_outlier == 0], na.rm = TRUE),
+    possibleVib = if_else((abs(az2) > vibTreshold), 1, 0), 
+    possibleVibRoll = rollmean(possibleVib, k = 10, fill = NA, align = "left"),
+    vibDetected = if_else((possibleVib == 1) & (possibleVibRoll > 0.41), 1, 0) # more than 2 out of next 9 lines should also be detected
+  ) %>% 
+  filter(vibDetected == 1) %>% 
+  summarise(
+    delay = first(delay)
+  )
+
+on_delay %>% 
+  summarise(
+    mean = mean(delay),
+    sd = sd(delay)
+  ) %>% 
+  mutate(
+    type = "on"
+  )
+
+
+
+off_delay <- ard2 %>% 
+  group_by(trialID, targetNumber) %>% 
+  mutate(
+    az_lag = az - lag(az, default = NULL),
+    az_lead = az - lead(az, default = NULL),
+    az_outlier = if_else((abs(az_lag) > azOutlierDect) & (abs(az_lead) > azOutlierDect), 1, 0)
+  ) %>%
+  mutate(
+    az2 = az - mean(az[-1:-15][az_outlier == 0], na.rm = TRUE),
+    possibleVib = if_else((abs(az2) > vibTreshold), 1, 0), 
+    possibleVibRoll = rollmean(possibleVib, k = 10, fill = NA, align = "right"),
+    vibDetected = if_else((possibleVib == 1) & (possibleVibRoll > 0.41), 1, 0) # more than 2 out of next 9 lines should also be detected
+  ) %>% 
+  filter(vibDetected == 1) %>%
+  filter(vibLeft == FALSE) %>%
+  mutate(
+    time2 = (time - first(time))*1000
+  ) %>% 
+  mutate(
+    sent = time2 - frameStartToAudioStopPre,
+    delay = sent + stopwatch
+  ) %>% 
+  summarise(
+    delay = last(delay)
+  )
+
+off_delay %>% 
+  summarise(
+    mean = mean(delay),
+    sd = sd(delay)
+  ) %>% 
+  mutate(
+    type = "on"
+  )
+
+```
+
+
+```{r}
+vib_on <- ard2 %>% 
+  filter(vibrationOn == TRUE) %>% 
+  group_by(targetNumber) %>% 
+  mutate(
+    micros = micros - first(micros),
+    az2 = az - mean(az[0:10]),
+    vibDetected = if_else(abs(az2) > 0.1,1,0)
+  ) %>% 
+  filter(vibDetected == 1) %>% 
+  summarise(
+    first = first(micros)/1000
+  )
+
+vib_on %>% 
+  summarise(
+    mean = mean(first),
+    sd = sd(first)
+  )
+vib_on %>% 
+  ggplot(aes(x=first,))+
+  geom_boxplot()
+
+vib_on <- ard2 %>% 
+  filter(vibLeft == TRUE) %>% 
+  group_by(targetNumber) %>% 
+  mutate(
+    micros = micros - first(micros),
+    az2 = az - mean(az[0:10]),
+    vibDetected = if_else(abs(az2) > 0.1,1,0)
+  ) %>% 
+  filter(vibDetected == 1) %>% 
+  summarise(
+    first = first(micros)/1000
+  )
+
+vib_on %>% 
+  summarise(
+    mean = mean(first),
+    sd = sd(first)
+  )
+vib_on %>% 
+  ggplot(aes(x=first,))+
+  geom_boxplot()
+```
+```{r}
+ard2 %>% 
+  filter(vibrationOn == TRUE) %>% 
+  group_by(targetNumber) %>% 
+  mutate(
+    micros = micros - first(micros),
+    az2 = az - mean(az[0:10]),
+    vibDetected = if_else(abs(az2) > 0.05,1,0),
+    millis = micros/1000
+  ) %>% 
+  filter(targetNumber <5) %>% 
+  ggplot(aes(y=az2, x = millis))+
+  geom_line()+
+  facet_wrap(~targetNumber)
+
+ard2 %>% 
+  filter(vibrationOn == TRUE) %>% 
+  group_by(targetNumber) %>% 
+  mutate(
+    az2 = az - mean(az[0:10]),
+    vibDetected = if_else(abs(az2) > 0.05,1,0),
+    micros = micros - first(micros[vibDetected = 1]),
+    millis = micros/1000
+  ) %>% 
+  filter(targetNumber <10) %>%
+  ggplot(aes(y=az2, x = millis, color = targetNumber))+
+  geom_line()+
+  facet_wrap(~targetNumber)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+

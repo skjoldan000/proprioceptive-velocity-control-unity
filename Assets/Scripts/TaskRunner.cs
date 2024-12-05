@@ -76,7 +76,6 @@ public class TaskRunner : MonoBehaviour
 
     // UXF settings
     private bool calibration;
-    private int nDims;
 
     // Trial progress
     private bool calibrationComplete = false;
@@ -108,6 +107,7 @@ public class TaskRunner : MonoBehaviour
     public AudioSource vibRight;
     public AudioSource vibBoth;
     [SerializeField]private float vibrationVolume = 0.7f;
+    public bool vibrationTriggered = false;
 
     // Others
     public TextMeshPro trialCounter;
@@ -118,6 +118,8 @@ public class TaskRunner : MonoBehaviour
     public float angleStartToController;
     public float angleStartToOffsetController;
     private List<Vector3> pointsForCalibration;
+    private int nDims;
+    public ArduinoReciever arduinoReciever;
 
     // Results to save
     private Vector3 startPos;
@@ -157,6 +159,7 @@ public class TaskRunner : MonoBehaviour
         tracker1d.SetActive(false);
         tracker2d.SetActive(false);
         Debug.Log("TaskRunner start completed");
+
     }
 
     public void StartTrial(Trial trial)
@@ -172,7 +175,14 @@ public class TaskRunner : MonoBehaviour
 
     IEnumerator TrialCoroutine(Trial trial)
     {
+
+        arduinoReciever.offsetApplied = false;
+        arduinoReciever.InitTrialDataFrame(trial);
+
+        nDims = trial.settings.GetInt("nDims");
         debugSphereScript.Visible(showDebugSphere);
+
+        // reset trialspace (2d)
         if (trial.settings.GetString("trialOrientation") == "lateral")
         {
             trialSpaceSetup.transform.position = trialSpaceSetupLateral.transform.position;
@@ -209,6 +219,7 @@ public class TaskRunner : MonoBehaviour
             tracker2d.SetActive(true);
         }
         trialID = $"{Session.instance.ppid}_{Session.instance.experimentName}_{Session.instance.number}_{Session.instance.currentBlockNum}_{Session.instance.currentTrialNum}";
+
         // calibration
         if (trial.settings.GetBool("calibration"))
         {
@@ -262,14 +273,32 @@ public class TaskRunner : MonoBehaviour
         float timer = 0f;
         bool readyButtonPressed = false;
         Vector3 initiatePosition = new Vector3();
+        Vector3 trialStartPos = new Vector3();
+        if (nDims == 1)
+        {
+
+        }
+        if (nDims == 2)
+        {
+            trialStartPos = trialStart.transform.position;
+        }
+        else
+        {
+            Debug.LogError("nDims must be 1 or 2");
+        }
+
         // Wait for proper distance to start and ready button to be pressed. Trial will start after delay from press.
         while(true)
         {
+            if (Input.GetKeyDown(KeyCode.P))
+            {
+                break;
+            }
             if (timer > 0.5f)
             {
                 break;
             }
-            if (Vector3.Distance(trialStart.transform.position, controllerSphere.transform.position) < 0.025)
+            if (Vector3.Distance(trialStartPos, controllerSphere.transform.position) < 0.025)
             {
                 trialStartScript.ColorObj(activeBlue);
                 if (OVRInput.GetDown(OVRInput.Button.Two) | readyButtonPressed)
@@ -278,6 +307,7 @@ public class TaskRunner : MonoBehaviour
                     {
                         initiatePosition = rightHandAnchor.transform.position;
                     }
+                    arduinoReciever.saving = true;
                     trialSpace.transform.position = rightHandAnchor.transform.position;
                     readyButtonPressed = true;
                     trialStartScript.ColorObj(readyYellow);
@@ -294,6 +324,7 @@ public class TaskRunner : MonoBehaviour
                 trialStartScript.ColorObj(startTeal);
                 trialTargetScript.ColorObj(standbyGrey);
                 trialSpace.transform.position = trialSpaceSetup.transform.position;
+                arduinoReciever.ResetSerialQueue();
             }
             else
             {
@@ -302,10 +333,11 @@ public class TaskRunner : MonoBehaviour
                 trialStartScript.ColorObj(startTeal);
                 trialTargetScript.ColorObj(standbyGrey);
                 trialSpace.transform.position = trialSpaceSetup.transform.position;
+                arduinoReciever.ResetSerialQueue();
             }
             yield return null;
         }
-
+        StartCoroutine(Vibration(trial));
 
         trialProgress = "trialStarted";
         trialStartedTime = Time.time;
@@ -374,7 +406,7 @@ public class TaskRunner : MonoBehaviour
 
         trueInput = GetRelativePosition(trialSpace.transform, rightHandAnchor.transform);
         visualOffsetInput = GetRelativePosition(trialSpace.transform, controllerSphere.transform);
-
+        arduinoReciever.saving = false;
         trialProgress = "trialInput";
         trialInputTime = Time.time;
 
@@ -385,6 +417,7 @@ public class TaskRunner : MonoBehaviour
         controllerSphereScript.ResetVisualOffset();
 
         SaveResults(trial);
+        arduinoReciever.SaveDataFrame(trial);
         yield return new WaitUntil(() => (Vector3.Distance(trialStart.transform.position, controllerSphere.transform.position) < 0.1f));
 
         trial.End();
@@ -397,10 +430,8 @@ public class TaskRunner : MonoBehaviour
         {
             StartCoroutine(ConfirmQuitCR());
         }
-        AudioLatencyTester.SetActive(debugAudio);
-        VRConsole.SetActive(showConsole);
-        debugSphereScript.Visible(showDebugSphere);
-        if (calibrationArmrestComplete)
+
+        if (nDims == 1 & calibrationArmrestComplete)
         {
             rightControllerAnchor.SetActive(false);
             offsetControllerAnchor.SetActive(true);
@@ -416,13 +447,16 @@ public class TaskRunner : MonoBehaviour
             rotatingArm.transform.forward = dirToOffsetController;
             rotationProjected.transform.forward = dirToController;
         }
-        else
+        else if (nDims == 1 & !calibrationArmrestComplete)
         {
             rightControllerAnchor.SetActive(true);
             offsetControllerAnchor.SetActive(false);
-            //offsetControllerAnchor.transform.position = rightHandAnchor.transform.position;
-            //offsetControllerAnchor.transform.rotation = rightHandAnchor.transform.rotation;
         }
+
+        // debug objs
+        AudioLatencyTester.SetActive(debugAudio);
+        VRConsole.SetActive(showConsole);
+        debugSphereScript.Visible(showDebugSphere);
         positionToOffsetFromScript.Visible(showDebugSpheresRotation);
         positionProjectedScript.Visible(showDebugSpheresRotation);
         positionOffsetProjectedScript.Visible(showDebugSpheresRotation);
@@ -523,6 +557,7 @@ public class TaskRunner : MonoBehaviour
     {
         string vibration = trial.settings.GetString("vibration");
         trialVibStart = Time.time;
+        vibrationTriggered = true;
         if (vibration == "left")
         {
             vibLeft.Play();
@@ -545,22 +580,37 @@ public class TaskRunner : MonoBehaviour
         for (int i = 0; i < 30; i++)
         {
             yield return null;
+            Debug.Log($"vibLeft: {vibLeft.isPlaying}, vibRight: {vibRight.isPlaying}, vibBoth: {vibBoth.isPlaying}");
         }
         trialVibStop = Time.time;
         vibLeft.Stop();
         vibRight.Stop();
         vibBoth.Stop();
+        vibrationTriggered = false;
     }
 
     IEnumerator BlockInstructions(Trial trial)
     {
         controllerSphereScript.Visible(false);
         rightControllerAnchor.SetActive(true);
-        GameObject b_instructionsArrow = generateInstructions.InstantiateArrowText(
-            buttonB,
-            "Starting new task!\n Look up and read instructions. Press and hold here when ready to start.",
-            true
-        );
+        GameObject b_instructionsArrow = null;
+        if (nDims == 1)
+        {
+            b_instructionsArrow = generateInstructions.InstantiateArrowText(
+                buttonBoffset,
+                "Starting new task!\n Look up and read instructions. Press and hold here when ready to start.",
+                true
+            );
+        }
+        else if (nDims == 2)
+        {
+            b_instructionsArrow = generateInstructions.InstantiateArrowText(
+                buttonB,
+                "Starting new task!\n Look up and read instructions. Press and hold here when ready to start.",
+                true
+                );
+        }
+
         string instructions = "Block instructions: \n" + trial.settings.GetString("blockInstructions");
         string instructions2 = "\n\nWhen you have read the instructions and is ready to start the task, " +
         "press and hold B for 1 second.";
@@ -583,12 +633,6 @@ public class TaskRunner : MonoBehaviour
         rightControllerAnchor.SetActive(false);
         controllerSphereScript.Visible(true);
         blockInstructionsComplete = true;
-    }
-
-    private void GetTrialSettings(Trial trial)
-    {
-        calibration = trial.settings.GetBool("calibration");
-        nDims = trial.settings.GetInt("nDims");
     }
 
     private void SaveResults(Trial trial)
