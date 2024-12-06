@@ -9,7 +9,11 @@ namespace UXF
     public class RelativePositionRotationTracker : Tracker
     {
         public override string MeasurementDescriptor => "movement";
-        public override IEnumerable<string> CustomHeader => new string[] {"trialID", "trialProgress", "truepos.x", "truepos.y", "truepos.z", "vispos.x", "vispos.y", "vispos.z", "controllerSphereVisible", "aButtonDown", "targetNumber", "vibrationTriggered", "vibBoth", "vibLeft", "vibRight", "arduinoListenerStopwatch", "frameStartToAudioStartPre", "frameStartToAudioStartPost", "frameStartToAudioStopPre", "frameStartToAudioStopPost"};
+        public override IEnumerable<string> CustomHeader => new string[] {
+            "trialID", "trialProgress", "truepos.x", "truepos.y", "truepos.z", "vispos.x", "vispos.y", "vispos.z", 
+            "controllerSphereVisible", "aButtonDown", "targetNumber", "vibrationTriggered", 
+            "vibBoth", "vibLeft", "vibRight", "arduinoListenerStopwatch", "frameStartToAudioStartPre", 
+            "frameStartToAudioStopPre"};
         public TaskRunner taskRunner;
         public GameObject trialSpace;
         public GameObject controllerSphere;
@@ -52,9 +56,7 @@ namespace UXF
                 ("vibRight", vibRight.isPlaying),
                 ("arduinoListenerStopwatch", arduinoReciever.alignedStopwatch),
                 ("frameStartToAudioStartPre", audioLatencyTester.frameStartToAudioStartPre),
-                ("frameStartToAudioStartPost", audioLatencyTester.frameStartToAudioStartPost),
-                ("frameStartToAudioStopPre", audioLatencyTester.frameStartToAudioStopPre),
-                ("frameStartToAudioStopPost", audioLatencyTester.frameStartToAudioStopPost)
+                ("frameStartToAudioStopPre", audioLatencyTester.frameStartToAudioStopPre)
             };
 
 

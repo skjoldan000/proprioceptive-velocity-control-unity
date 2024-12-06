@@ -8,11 +8,15 @@ using UXF;
 using System.Globalization;
 
 public class ArduinoReciever : MonoBehaviour {
-    private SerialPort serialPort;
-    private Thread serialThread;
-    private ConcurrentQueue<string> serialQueue = new ConcurrentQueue<string>(); // Thread-safe queue
-    private bool isRunning = false;
-    [SerializeField] private string COMPort = "COM7";
+    private SerialPort serialPortMPU;
+    private Thread serialThreadMPU;
+    private ConcurrentQueue<string> serialQueueMPU = new ConcurrentQueue<string>();
+    private SerialPort serialPortMPUAudio;
+    private Thread serialThreadAudio;
+    private ConcurrentQueue<string> serialQueueAudio = new ConcurrentQueue<string>(); 
+    [SerializeField] private bool isRunning = false;
+    [SerializeField] private string COMportMPU = "COM20";
+    [SerializeField] private string COMportAudio = "COM21";
     [SerializeField] private int Baudrate = 500000;
     [SerializeField] private int MPU6050_ACCEL_FS = 8;
     private float accelerationTranslation = 1;
@@ -31,10 +35,11 @@ public class ArduinoReciever : MonoBehaviour {
     private float stopwatchOffset;
     private string alignedTimeString;
     public bool offsetApplied = false;
+    private int linesToProcess = 100;
 
 
     // Preallocate parsing memory
-    private string[] parsedParts = new string[6]; // Fixed size for 6 fields
+    private string[] parsedPartsMPU = new string[6]; // Fixed size for 6 fields
 
     // List to store trial data
     private List<string> trialData = new List<string>();
@@ -47,22 +52,55 @@ public class ArduinoReciever : MonoBehaviour {
         // Configure and open the serial port
         try
         {
-            serialPort = new SerialPort(COMPort, Baudrate);
-            serialPort.ReadTimeout = 10; // Prevent blocking
-            serialPort.Open();
+            serialPortMPU = new serialPortMPU(COMportMPU, Baudrate);
+            serialPortMPU.ReadTimeout = 10; // Prevent blocking
+            serialPortMPU.Open();
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"Error opening serial port {COMPort}: {ex.Message}");
+            Debug.LogError($"Error opening serial port {COMportMPU}: {ex.Message}");
         }
 
+        try
+        {
+            serialPortAudio = new serialPortMPU(COMportMPU, Baudrate);
+            serialPortAudio.ReadTimeout = 10; // Prevent blocking
+            serialPortAudio.Open();
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"Error opening serial port {COMportAudio}: {ex.Message}");
+        
         // Start the serial reading thread
-        isRunning = true;
-        serialThread = new Thread(ReadSerialData);
-        serialThread.Start();
 
-        Debug.Log("Serial port opened and thread started.");
-        //Debug.Log($"timing: stopwatch: {stopwatch.ElapsedMilliseconds}, offset: {stopwatchOffset}, offsetted: {(stopwatch.ElapsedMilliseconds/1000f) + stopwatchOffset}");
+        if (serialPortMPU.IsOpen)
+        {
+            serialThreadMPU = new Thread(ReadSerialData);
+            serialThreadMPU.Start();
+            isRunning = true;
+            Debug.Log($"Serial port {serialPortMPU} opened and thread started.");
+        }
+        else{
+            isRunning = false;
+            Debug.LogWarning($"Port not openned {COMportMPU}. Setting isRunning to {isRunning}");
+        }
+        if (serialPortAudio.IsOpen)
+        {
+            serialThreadAudio = new Thread(ReadSerialData);
+            serialThreadAudio.Start();
+            isRunning = true;
+            Debug.Log($"Serial port {serialPortAudio} opened and thread started.");
+        }
+        else{
+            isRunning = false;
+            Debug.LogWarning($"Port not openned {COMportAudio}. Setting isRunning to {isRunning}");
+        }
+        if (!isRunning)
+        {
+            Debug.LogError("At least 1 COM port not properly opened.");
+        }
+        
+
     }
     
     public void AlignStopwatch()
@@ -71,64 +109,70 @@ public class ArduinoReciever : MonoBehaviour {
     }
 
     void Update() {
-        // Process multiple lines of data per frame
-        int linesToProcess = 100; // Adjust based on frame rate and data rate
-        alignedStopwatch = (stopwatch.ElapsedMilliseconds/1000f) + stopwatchOffset;
-        if (saving)
+        if (isRunning)
         {
-            if (serialQueue.Count > 15)
+            alignedStopwatch = (stopwatch.ElapsedMilliseconds/1000f) + stopwatchOffset;
+            if (saving)
             {
-                Debug.LogWarning($"len of queue: {serialQueue.Count}");
-            }
-            //Debug.Log("parsing and saving data...");
-            for (int i = 0; i < linesToProcess; i++) {
-                if (serialQueue.TryDequeue(out string data)) {
-                    ParseAndProcessData(data);
-                } else {
-                    break; // No more data to process
+                if (serialQueueMPU.Count > 15)
+                {
+                    Debug.LogWarning($"len of queue: {serialQueueMPU.Count}");
                 }
+                //Debug.Log("parsing and saving data...");
+                for (int i = 0; i < linesToProcess; i++) {
+                    if (serialQueueMPU.TryDequeue(out string data)) {
+                        ParseAndProcessData(data);
+                    } else {
+                        break; // No more data to process
+                    }
+                }
+                for (int i = 0; i < linesToProcess; i++) {
+                    if (serialQueueMPU.TryDequeue(out string data)) {
+                        ParseAndProcessData(data);
+                    } else {
+                        break; // No more data to process
+                    }
+                }
+                
+                //Debug.Log($"Data added to table: {alignedTime},{micros},{ax},{ay},{az},{signalAmplitude},{frequency}");
+                //Debug.Log($"Audio detected: {signalAmplitude}");
             }
-            //Debug.Log($"Data added to table: {alignedTime},{micros},{ax},{ay},{az},{signalAmplitude},{frequency}");
-            //Debug.Log($"Audio detected: {signalAmplitude}");
-        }
-        //Debug.Log($"timing: unitytime{Time.time}, stopwatch: {(stopwatch.ElapsedMilliseconds/1000f)} stopwatch aligned: {(stopwatch.ElapsedMilliseconds/1000f) + stopwatchOffset}, diff: {Time.time - ((stopwatch.ElapsedMilliseconds/1000f) + stopwatchOffset)}");
-        if (!offsetApplied)
-        {
-            stopwatchOffset = (Time.time - (stopwatch.ElapsedMilliseconds/1000f));
-            ResetSerialQueue();
-            offsetApplied = true;
+            //Debug.Log($"timing: unitytime{Time.time}, stopwatch: {(stopwatch.ElapsedMilliseconds/1000f)} stopwatch aligned: {(stopwatch.ElapsedMilliseconds/1000f) + stopwatchOffset}, diff: {Time.time - ((stopwatch.ElapsedMilliseconds/1000f) + stopwatchOffset)}");
+            if (!offsetApplied)
+            {
+                stopwatchOffset = (Time.time - (stopwatch.ElapsedMilliseconds/1000f));
+                ResetserialQueueMPU();
+                offsetApplied = true;
+            }
         }
     }
     public void InitTrialDataFrame(Trial trial)
     {
-        // Initialize a new data table for the current trial
-        var headers = new string[]{ "time", "stopwatch", "micros", "ax", "ay", "az", "signalAmplitude", "vibrationOn", "frequency" };
-        currentTrialDataTable = new UXFDataTable(headers);
-        Debug.Log($"Arduino Initialized data table for trial {trial.number}");
+        if (isRunning)
+        {
+            // Initialize a new data table for the current trial
+            var headers = new string[]{ "time", "stopwatch", "micros", "ax", "ay", "az", "signalAmplitude", "vibrationOn", "frequency" };
+            currentTrialDataTable = new UXFDataTable(headers);
+            Debug.Log($"Arduino Initialized data table for trial {trial.number}");
+        }
     }
 
     void ReadSerialData() {
         // Thread for reading serial data
         while (isRunning) {
             try {
-                if (serialPort.BytesToRead > 0) { // Ensure there is data to read
-                    string data = serialPort.ReadLine(); // Read incoming serial data
-                    //alignedTime = (stopwatch.ElapsedMilliseconds / 1000.0f) + stopwatchOffset;
-                    //alignedTimeString = alignedTime.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                if (serialPortMPU.BytesToRead > 0) { // Ensure there is data to read
+                    string data = serialPortMPU.ReadLine(); // Read incoming serial data
                     double unityFrameTime = FrameTimer.FrameStopwatch.Elapsed.TotalMilliseconds;
                     string unityFrameTimeString = unityFrameTime.ToString(System.Globalization.CultureInfo.InvariantCulture);
                     // Append timestamp to the data
                     string timedData = $"{unityFrameTimeString},{data}";
-                    serialQueue.Enqueue(timedData);
-                    
-                    //Debug.Log($"timing2: Raw received data: {data}");
-                    //Debug.Log($"timing2: Formatted aligned time: {alignedTimeString}");
-                    //Debug.Log($"timing2: full timed data string: {timedData}");
-
+                    serialQueueMPU.Enqueue(timedData);
                 }
             } catch (System.Exception ex) {
                 Debug.LogWarning("Serial read error: " + ex.Message);
             }
+            
         }
     }
 
@@ -136,23 +180,23 @@ public class ArduinoReciever : MonoBehaviour {
     {
         try
         {
-            string[] parsedParts = data.Split(',');
+            string[] parsedPartsMPU = data.Split(',');
 
-            if (parsedParts.Length == 8)
+            if (parsedPartsMPU.Length == 7)
             {
                 // Parse the data
-                float unityFrameTime = float.Parse(parsedParts[0], System.Globalization.CultureInfo.InvariantCulture);
+                float unityFrameTime = float.Parse(parsedPartsMPU[0], System.Globalization.CultureInfo.InvariantCulture);
                 float unitytime = Time.time;
-                ax = float.Parse(parsedParts[1]) / 32768.0f * MPU6050_ACCEL_FS; // Accelerometer X
-                ay = float.Parse(parsedParts[2]) / 32768.0f * MPU6050_ACCEL_FS; // Y-axis
-                az = float.Parse(parsedParts[3]) / 32768.0f * MPU6050_ACCEL_FS; // Z-axis
-                //ax = float.Parse(parsedParts[1]); // Accelerometer X
-                //ay = float.Parse(parsedParts[2]); // Y-axis
-                //az = float.Parse(parsedParts[3]); // Z-axis
-                signalAmplitude = int.Parse(parsedParts[4]); // Signal amplitude
-                micros = int.Parse(parsedParts[5]); // Current time in µs
-                int vibrationOn = int.Parse(parsedParts[6]); // vibrationTriggered
-                frequency = int.Parse(parsedParts[7]); // Frequency in Hz
+                ax = float.Parse(parsedPartsMPU[1]) / 32768.0f * MPU6050_ACCEL_FS; // Accelerometer X
+                ay = float.Parse(parsedPartsMPU[2]) / 32768.0f * MPU6050_ACCEL_FS; // Y-axis
+                az = float.Parse(parsedPartsMPU[3]) / 32768.0f * MPU6050_ACCEL_FS; // Z-axis
+                //ax = float.Parse(parsedPartsMPU[1]); // Accelerometer X
+                //ay = float.Parse(parsedPartsMPU[2]); // Y-axis
+                //az = float.Parse(parsedPartsMPU[3]); // Z-axis
+                signalAmplitude = int.Parse(parsedPartsMPU[4]); // Signal amplitude
+                micros = int.Parse(parsedPartsMPU[5]); // Current time in µs
+                int vibrationOn = int.Parse(parsedPartsMPU[6]); // vibrationTriggered
+                frequency = int.Parse(parsedPartsMPU[7]); // Frequency in Hz
                 //time = Time.time;
 
                 // Add data to the trial's UXFDataTable
@@ -200,30 +244,45 @@ public class ArduinoReciever : MonoBehaviour {
     void OnApplicationQuit() {
         // Stop the thread and close the serial port
         isRunning = false;
-        if (serialThread != null && serialThread.IsAlive) {
-            serialThread.Join(); // Wait for thread to finish
+        if (serialThreadMPU != null && serialThreadMPU.IsAlive) {
+            serialThreadMPU.Join(); // Wait for thread to finish
         }
-        if (serialPort != null && serialPort.IsOpen) {
-            serialPort.Close();
+        if (serialPortMPU != null && serialPortMPU.IsOpen) {
+            serialPortMPU.Close();
         }
         Debug.Log("Serial port closed and thread stopped.");
     }
-    public void ResetSerialQueue()
+    public void ResetserialQueueMPU()
     {
-        serialQueue = new ConcurrentQueue<string>();
-        Debug.Log("Serial queue reinitialized.");
-    }
-    public void SendTrigger(bool value)
-    {
-        if (serialPort.IsOpen)
+        if (isRunning)
         {
-            string message = value ? "TRUE\n" : "FALSE\n"; // Append newline character for Arduino's readStringUntil
-            serialPort.WriteLine(message);
-            //UnityEngine.Debug.Log($"Sent: {message}");
+            serialQueueMPU = new ConcurrentQueue<string>();
+            Debug.Log("Serial queue reinitialized.");
         }
-        else
+    }
+    public void SendTrigger(string value)
+    {
+        if (isRunning)
         {
-            UnityEngine.Debug.LogWarning("Serial port is not open!");
+            if (serialPortMPU.IsOpen)
+            {
+                string message = $"{value}\n"; // Append newline character for Arduino's readStringUntil
+                serialPortMPU.WriteLine(message);
+            }
+            else
+            {
+                UnityEngine.Debug.LogWarning("Serial port is not open!");
+            }
+            if (serialPortAudio.IsOpen)
+            {
+                string message = $"{value}\n"; // Append newline character for Arduino's readStringUntil
+                serialPortAudio.WriteLine(message);
+            }
+            else
+            {
+                UnityEngine.Debug.LogWarning("Serial port is not open!");
+            }
+            
         }
     }
 }

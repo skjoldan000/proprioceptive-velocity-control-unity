@@ -65,6 +65,15 @@ public class TaskRunner : MonoBehaviour
     private ControlSphere positionProjectedScript;
     private ControlSphere positionOffsetProjectedScript;
     public GameObject offsetControllerAnchor;
+    public GameObject rotationPacer;
+    public GameObject positionPacer;
+    private ControlSphere positionPacerScript;
+    public GameObject A1d;
+    public GameObject A1dPos;
+    private ControlSphere A1dPosScript;
+    public GameObject B1d;
+    public GameObject B1dPos;
+    private ControlSphere B1dPosScript;
 
     // Materials
     public Material targetGreen;
@@ -144,6 +153,9 @@ public class TaskRunner : MonoBehaviour
         positionToOffsetFromScript = positionToOffsetFrom.GetComponent<ControlSphere>();
         positionProjectedScript = positionProjected.GetComponent<ControlSphere>();
         positionOffsetProjectedScript = positionOffsetProjected.GetComponent<ControlSphere>();
+        positionPacerScript = positionPacer.GetComponent<ControlSphere>();
+        A1dPosScript = A1dPos.GetComponent<ControlSphere>();
+        B1dPosScript = B1dPos.GetComponent<ControlSphere>();
 
         if (trialStartScript == null)
         {
@@ -158,6 +170,9 @@ public class TaskRunner : MonoBehaviour
         controllerSphereScript.Visible(false);
         tracker1d.SetActive(false);
         tracker2d.SetActive(false);
+        A1dPosScript.Visible(false);
+        B1dPosScript.Visible(false);
+        positionPacerScript.Visible(false);
         Debug.Log("TaskRunner start completed");
 
     }
@@ -182,33 +197,7 @@ public class TaskRunner : MonoBehaviour
         nDims = trial.settings.GetInt("nDims");
         debugSphereScript.Visible(showDebugSphere);
 
-        // reset trialspace (2d)
-        if (trial.settings.GetString("trialOrientation") == "lateral")
-        {
-            trialSpaceSetup.transform.position = trialSpaceSetupLateral.transform.position;
-            trialSpaceSetup.transform.rotation = trialSpaceSetupLateral.transform.rotation;
-        }
-        else if (trial.settings.GetString("trialOrientation") == "forwardBack")
-        {
-            trialSpaceSetup.transform.position = trialSpaceSetupForwardBack.transform.position;
-            trialSpaceSetup.transform.rotation = trialSpaceSetupForwardBack.transform.rotation;
-        }
-        else
-        {
-            Debug.LogError("trialOrientation must be either 'lateral' or 'forwardBack'");
-            trial.End();
-            Session.instance.End();
-        }
 
-        trialSpace.transform.position = trialSpaceSetup.transform.position;
-        trialSpace.transform.rotation = trialSpaceSetup.transform.rotation;
-
-        if (trial.settings.GetBool("applyRandomRotation"))
-        {
-            List<float> randomRotationRange = trial.settings.GetFloatList("randomRotationRange");
-            trialSpaceRotationY = Random.Range(randomRotationRange[0], randomRotationRange[1]);
-            trialSpace.transform.Rotate(0f, trialSpaceRotationY, 0f);
-        }
 
         if (trial.settings.GetInt("nDims") == 1)
         {
@@ -217,6 +206,33 @@ public class TaskRunner : MonoBehaviour
         if (trial.settings.GetInt("nDims") == 2)
         {
             tracker2d.SetActive(true);
+            // reset trialspace (2d)
+            if (trial.settings.GetString("trialOrientation") == "lateral")
+            {
+                trialSpaceSetup.transform.position = trialSpaceSetupLateral.transform.position;
+                trialSpaceSetup.transform.rotation = trialSpaceSetupLateral.transform.rotation;
+            }
+            else if (trial.settings.GetString("trialOrientation") == "forwardBack")
+            {
+                trialSpaceSetup.transform.position = trialSpaceSetupForwardBack.transform.position;
+                trialSpaceSetup.transform.rotation = trialSpaceSetupForwardBack.transform.rotation;
+            }
+            else
+            {
+                Debug.LogError("trialOrientation must be either 'lateral' or 'forwardBack'");
+                trial.End();
+                Session.instance.End();
+            }
+
+            trialSpace.transform.position = trialSpaceSetup.transform.position;
+            trialSpace.transform.rotation = trialSpaceSetup.transform.rotation;
+
+            if (trial.settings.GetBool("applyRandomRotation"))
+            {
+                List<float> randomRotationRange = trial.settings.GetFloatList("randomRotationRange");
+                trialSpaceRotationY = Random.Range(randomRotationRange[0], randomRotationRange[1]);
+                trialSpace.transform.Rotate(0f, trialSpaceRotationY, 0f);
+            }
         }
         trialID = $"{Session.instance.ppid}_{Session.instance.experimentName}_{Session.instance.number}_{Session.instance.currentBlockNum}_{Session.instance.currentTrialNum}";
 
@@ -260,165 +276,246 @@ public class TaskRunner : MonoBehaviour
         trialProgress = "trialSetup";
         trialSetupTime = Time.time;
 
-        startPos = trialStart.transform.position;
-        targetPos = new Vector3(0f, 0f, 0.4f);
-        controllerSphereScript.Visible(true);
-        trialStartScript.Visible(true);
-        trialTargetScript.Visible(true);
-        trialTargetScript.PositionAnchor(targetPos);
-        trialTargetScript.ColorObj(standbyGrey);
-        trialStartScript.ColorObj(startTeal);
-        controllerSphereScript.ResetVisualOffset();
-
-        float timer = 0f;
-        bool readyButtonPressed = false;
-        Vector3 initiatePosition = new Vector3();
-        Vector3 trialStartPos = new Vector3();
         if (nDims == 1)
         {
+            Debug.Log("nDims1 started");
+            Vector3 dirToStart = Quaternion.Euler(0, -43.0f, 0) * (leftHandAnchor.transform.position - rotatingArmSpace.transform.position);
+            Vector3 dirToEnd = Quaternion.Euler(0, trial.settings.GetFloat("targetDegrees"), 0) * dirToStart;
+            A1d.transform.rotation = Quaternion.LookRotation(dirToStart);
+            B1d.transform.rotation = Quaternion.LookRotation(dirToEnd);
+            A1dPosScript.Visible(true);
+            B1dPosScript.Visible(true);
+            A1dPosScript.ColorObj(startTeal);
+            B1dPosScript.ColorObj(standbyGrey);
+            bool readyButtonPressed = false;
+            float timer = 0f;
+            Quaternion initiateRotation = A1d.transform.rotation;
+            while(true)
+            {
+                float angle = Mathf.Abs(CalculateAngleDirectional(positionProjected, A1dPos, rotatingArmSpace));
+                if (Input.GetKeyDown(KeyCode.P))
+                {
+                    break;
+                }
+                if (timer > 0.5f)
+                {
+                    break;
+                }
+                if (angle < 2.5)
+                {
+                    A1dPosScript.ColorObj(activeBlue);
+                    if (OVRInput.GetDown(OVRInput.Button.Two) | readyButtonPressed)
+                    {
+                        if (!readyButtonPressed)
+                        {
+                            initiateRotation = rotationProjected.transform.rotation;
+                        }
+                        arduinoReciever.saving = true;
+                        A1d.transform.rotation = rotationProjected.transform.rotation;
+                        readyButtonPressed = true;
+                        A1dPosScript.ColorObj(readyYellow);
+                        B1dPosScript.ColorObj(readyYellow);
+                        timer += Time.deltaTime;
+                        Debug.Log($"Keep stationary for {0.5f - timer}");
+                    }
+                }
+                else if (readyButtonPressed && angle > 0.5)
+                {
+                    Debug.Log("angle exceeded triggered: " + angle);
+                    timer = 0f;
+                    readyButtonPressed = false;
+                    A1dPosScript.ColorObj(startTeal);
+                    B1dPosScript.ColorObj(standbyGrey);
+                    A1d.transform.rotation = Quaternion.LookRotation(dirToStart);
+                    if (arduinoReciever.saving)
+                    {
+                        arduinoReciever.ResetSerialQueue();
+                        arduinoReciever.saving = false;
+                    }
+                }
+                else
+                {
+                    timer = 0f;
+                    readyButtonPressed = false;
+                    A1dPosScript.ColorObj(startTeal);
+                    B1dPosScript.ColorObj(standbyGrey);
+                    A1d.transform.rotation = Quaternion.LookRotation(dirToStart);
+                    if (arduinoReciever.saving)
+                    {
+                        arduinoReciever.ResetSerialQueue();
+                        arduinoReciever.saving = false;
+                    }
+                }
+                yield return null;
+                
+            }
+            A1dPosScript.Visible(false);
+            B1dPosScript.ColorObj(targetGreen);
+            Debug.Log($"Trial 1d started");
+            StartCoroutine(RotatePacer(A1dPos.transform.position, B1dPos.transform.position, 2.0f));
+            yield return new WaitUntil(() => (OVRInput.GetDown(OVRInput.Button.One)));
 
         }
-        if (nDims == 2)
+        else if (nDims == 2)
         {
+            startPos = trialStart.transform.position;
+            targetPos = new Vector3(0f, 0f, 0.4f);
+            controllerSphereScript.Visible(true);
+            trialStartScript.Visible(true);
+            trialTargetScript.Visible(true);
+            trialTargetScript.PositionAnchor(targetPos);
+            trialTargetScript.ColorObj(standbyGrey);
+            trialStartScript.ColorObj(startTeal);
+            controllerSphereScript.ResetVisualOffset();
+
+            float timer = 0f;
+            bool readyButtonPressed = false;
+            Vector3 initiatePosition = new Vector3();
+            Vector3 trialStartPos = new Vector3();
             trialStartPos = trialStart.transform.position;
+
+            // Wait for proper distance to start and ready button to be pressed. Trial will start after delay from press.
+            while(true)
+            {
+                if (Input.GetKeyDown(KeyCode.P))
+                {
+                    break;
+                }
+                if (timer > 0.5f)
+                {
+                    break;
+                }
+                if (Vector3.Distance(trialStartPos, controllerSphere.transform.position) < 0.025)
+                {
+                    trialStartScript.ColorObj(activeBlue);
+                    if (OVRInput.GetDown(OVRInput.Button.Two) | readyButtonPressed)
+                    {
+                        if (!readyButtonPressed)
+                        {
+                            initiatePosition = rightHandAnchor.transform.position;
+                        }
+                        arduinoReciever.saving = true;
+                        trialSpace.transform.position = rightHandAnchor.transform.position;
+                        readyButtonPressed = true;
+                        trialStartScript.ColorObj(readyYellow);
+                        trialTargetScript.ColorObj(readyYellow);
+                        timer += Time.deltaTime;
+                    }
+                }
+                else if (readyButtonPressed && Vector3.Distance(initiatePosition, rightHandAnchor.transform.position) > 0.01)
+                {
+                    Debug.Log("Distance exceeded triggered: " + Vector3.Distance(initiatePosition, rightHandAnchor.transform.position));
+                    timer = 0f;
+                    readyButtonPressed = false;
+                    trialStartScript.ColorObj(startTeal);
+                    trialTargetScript.ColorObj(standbyGrey);
+                    trialSpace.transform.position = trialSpaceSetup.transform.position;
+                    if (arduinoReciever.saving)
+                    {
+                        arduinoReciever.ResetSerialQueue();
+                        arduinoReciever.saving = false;
+                    }                }
+                else
+                {
+                    timer = 0f;
+                    readyButtonPressed = false;
+                    trialStartScript.ColorObj(startTeal);
+                    trialTargetScript.ColorObj(standbyGrey);
+                    trialSpace.transform.position = trialSpaceSetup.transform.position;
+                    if (arduinoReciever.saving)
+                    {
+                        arduinoReciever.ResetSerialQueue();
+                        arduinoReciever.saving = false;
+                    }                }
+                yield return null;
+            }
+            StartCoroutine(Vibration(trial));
+
+            trialProgress = "trialStarted";
+            trialStartedTime = Time.time;
+
+            if (trial.settings.GetInt("nTargets") == 1)
+            {
+                trialStartScript.Visible(false);
+                controllerSphereScript.Visible(trial.settings.GetBool("controllerVisibleTrialStart"));
+
+
+                controllerSphereScript.visualOffsetFromReference(new Vector3(
+                    trial.settings.GetFloat("visualXOffset"), 
+                    0, 
+                    trial.settings.GetFloat("visualZOffset")),
+                    trialSpace.transform);
+                trialTargetScript.ColorObj(targetGreen);
+                // Trial is now initiated
+                // Controller visibility
+                yield return new WaitUntil(() =>(GetRelativePosition(trialSpace.transform, rightHandAnchor.transform).z > trial.settings.GetFloat("controllerMidpointOnStart")));
+                StartCoroutine(ControllerVisibility(trial));
+
+                // Ensure input button is not fat fingered immediately before input is allowed
+                yield return new WaitUntil(() => (Vector3.Distance(trialStart.transform.position, controllerSphere.transform.position) > 0.1f));
+                yield return new WaitUntil(() => (OVRInput.GetDown(OVRInput.Button.One)));
+            }
+
+            if (trial.settings.GetInt("nTargets") > 1)
+            {
+                controllerSphereScript.Visible(trial.settings.GetBool("controllerVisibleTrialStart"));
+                Vector3 lastInputPosition = trialStart.transform.position;
+                //targetNumber = 1;
+                for (int i = 1; i <= trial.settings.GetInt("nTargets"); i++)
+                {
+                    if (i > 1)
+                    {
+                    yield return null; // pause till next frame to not increment targetNumber on the same frame as Button.One is pressed
+                    }
+                    controllerSphereScript.ResetVisualOffset(); 
+                    targetNumber = i;
+                    if (i % 2 == 1)
+                    {
+                        trialStartScript.ColorObj(standbyGrey);
+                        trialTargetScript.ColorObj(targetGreen);
+                    }
+                    else
+                    {
+                        trialStartScript.ColorObj(targetGreen);
+                        trialTargetScript.ColorObj(standbyGrey);
+                    }
+                    yield return new WaitUntil(() => Vector3.Distance(lastInputPosition, rightHandAnchor.transform.position) > trial.settings.GetFloat("controllerMidpointOnStart"));
+                    if (i == 9 | i == 11)
+                    {
+                        StartCoroutine(ControllerVisibility(trial));
+                        controllerSphereScript.visualOffsetFromReference(new Vector3(
+                            trial.settings.GetFloat("visualXOffset"),
+                            0, 
+                            trial.settings.GetFloat("visualZOffset")),
+                            trialSpace.transform);
+                    }
+                    yield return new WaitUntil(() => (OVRInput.GetDown(OVRInput.Button.One)));
+                    lastInputPosition = rightHandAnchor.transform.position;
+                }
+            }
+
+            controllerSphereScript.Visible(false);
+
+            trueInput = GetRelativePosition(trialSpace.transform, rightHandAnchor.transform);
+            visualOffsetInput = GetRelativePosition(trialSpace.transform, controllerSphere.transform);
+            arduinoReciever.saving = false;
+            trialProgress = "trialInput";
+            trialInputTime = Time.time;
+
+            trialStartScript.Visible(true);
+            trialTargetScript.PositionAnchor(targetPos);
+            trialTargetScript.ColorObj(standbyGrey);
+            trialStartScript.ColorObj(startTeal);
+            controllerSphereScript.ResetVisualOffset();
+
+            yield return new WaitUntil(() => (Vector3.Distance(trialStart.transform.position, controllerSphere.transform.position) < 0.1f));
         }
         else
         {
             Debug.LogError("nDims must be 1 or 2");
         }
-
-        // Wait for proper distance to start and ready button to be pressed. Trial will start after delay from press.
-        while(true)
-        {
-            if (Input.GetKeyDown(KeyCode.P))
-            {
-                break;
-            }
-            if (timer > 0.5f)
-            {
-                break;
-            }
-            if (Vector3.Distance(trialStartPos, controllerSphere.transform.position) < 0.025)
-            {
-                trialStartScript.ColorObj(activeBlue);
-                if (OVRInput.GetDown(OVRInput.Button.Two) | readyButtonPressed)
-                {
-                    if (!readyButtonPressed)
-                    {
-                        initiatePosition = rightHandAnchor.transform.position;
-                    }
-                    arduinoReciever.saving = true;
-                    trialSpace.transform.position = rightHandAnchor.transform.position;
-                    readyButtonPressed = true;
-                    trialStartScript.ColorObj(readyYellow);
-                    trialTargetScript.ColorObj(readyYellow);
-                    timer += 0.1f;
-                    yield return new WaitForSeconds(0.1f);
-                }
-            }
-            else if (readyButtonPressed && Vector3.Distance(initiatePosition, rightHandAnchor.transform.position) > 0.01)
-            {
-                Debug.Log("Distance exceeded triggered: " + Vector3.Distance(initiatePosition, rightHandAnchor.transform.position));
-                timer = 0f;
-                readyButtonPressed = false;
-                trialStartScript.ColorObj(startTeal);
-                trialTargetScript.ColorObj(standbyGrey);
-                trialSpace.transform.position = trialSpaceSetup.transform.position;
-                arduinoReciever.ResetSerialQueue();
-            }
-            else
-            {
-                timer = 0f;
-                readyButtonPressed = false;
-                trialStartScript.ColorObj(startTeal);
-                trialTargetScript.ColorObj(standbyGrey);
-                trialSpace.transform.position = trialSpaceSetup.transform.position;
-                arduinoReciever.ResetSerialQueue();
-            }
-            yield return null;
-        }
-        StartCoroutine(Vibration(trial));
-
-        trialProgress = "trialStarted";
-        trialStartedTime = Time.time;
-
-        if (trial.settings.GetInt("nTargets") == 1)
-        {
-            trialStartScript.Visible(false);
-            controllerSphereScript.Visible(trial.settings.GetBool("controllerVisibleTrialStart"));
-
-
-            controllerSphereScript.visualOffsetFromReference(new Vector3(
-                trial.settings.GetFloat("visualXOffset"), 
-                0, 
-                trial.settings.GetFloat("visualZOffset")),
-                trialSpace.transform);
-            trialTargetScript.ColorObj(targetGreen);
-            // Trial is now initiated
-            // Controller visibility
-            yield return new WaitUntil(() =>(GetRelativePosition(trialSpace.transform, rightHandAnchor.transform).z > trial.settings.GetFloat("controllerMidpointOnStart")));
-            StartCoroutine(ControllerVisibility(trial));
-
-            // Ensure input button is not fat fingered immediately before input is allowed
-            yield return new WaitUntil(() => (Vector3.Distance(trialStart.transform.position, controllerSphere.transform.position) > 0.1f));
-            yield return new WaitUntil(() => (OVRInput.GetDown(OVRInput.Button.One)));
-        }
-
-        if (trial.settings.GetInt("nTargets") > 1)
-        {
-            controllerSphereScript.Visible(trial.settings.GetBool("controllerVisibleTrialStart"));
-            Vector3 lastInputPosition = trialStart.transform.position;
-            //targetNumber = 1;
-            for (int i = 1; i <= trial.settings.GetInt("nTargets"); i++)
-            {
-                if (i > 1)
-                {
-                   yield return null; // pause till next frame to not increment targetNumber on the same frame as Button.One is pressed
-                }
-                controllerSphereScript.ResetVisualOffset(); 
-                targetNumber = i;
-                if (i % 2 == 1)
-                {
-                    trialStartScript.ColorObj(standbyGrey);
-                    trialTargetScript.ColorObj(targetGreen);
-                }
-                else
-                {
-                    trialStartScript.ColorObj(targetGreen);
-                    trialTargetScript.ColorObj(standbyGrey);
-                }
-                yield return new WaitUntil(() => Vector3.Distance(lastInputPosition, rightHandAnchor.transform.position) > trial.settings.GetFloat("controllerMidpointOnStart"));
-                if (i == 9 | i == 11)
-                {
-                    StartCoroutine(ControllerVisibility(trial));
-                    controllerSphereScript.visualOffsetFromReference(new Vector3(
-                        trial.settings.GetFloat("visualXOffset"),
-                        0, 
-                        trial.settings.GetFloat("visualZOffset")),
-                        trialSpace.transform);
-                }
-                yield return new WaitUntil(() => (OVRInput.GetDown(OVRInput.Button.One)));
-                lastInputPosition = rightHandAnchor.transform.position;
-            }
-        }
-
-        controllerSphereScript.Visible(false);
-
-        trueInput = GetRelativePosition(trialSpace.transform, rightHandAnchor.transform);
-        visualOffsetInput = GetRelativePosition(trialSpace.transform, controllerSphere.transform);
-        arduinoReciever.saving = false;
-        trialProgress = "trialInput";
-        trialInputTime = Time.time;
-
-        trialStartScript.Visible(true);
-        trialTargetScript.PositionAnchor(targetPos);
-        trialTargetScript.ColorObj(standbyGrey);
-        trialStartScript.ColorObj(startTeal);
-        controllerSphereScript.ResetVisualOffset();
-
         SaveResults(trial);
         arduinoReciever.SaveDataFrame(trial);
-        yield return new WaitUntil(() => (Vector3.Distance(trialStart.transform.position, controllerSphere.transform.position) < 0.1f));
 
         trial.End();
     }
@@ -561,31 +658,37 @@ public class TaskRunner : MonoBehaviour
         if (vibration == "left")
         {
             vibLeft.Play();
+            Debug.Log("vib left started");
         }
         else if (vibration == "right")
         {
             vibRight.Play();
+            Debug.Log("vib right started");
         }
         else if (vibration == "both")
         {
             vibBoth.Play();
+            Debug.Log("vib both started");
         }
         else if (vibration == "none")
         {
+            Debug.Log("No vib started");
         }
         else
         {
             Debug.LogError($"vibration was set to: {vibration}. Must be either left, right, both or none");
         }
+        
         for (int i = 0; i < 30; i++)
         {
             yield return null;
-            Debug.Log($"vibLeft: {vibLeft.isPlaying}, vibRight: {vibRight.isPlaying}, vibBoth: {vibBoth.isPlaying}");
+            //Debug.Log($"vibLeft: {vibLeft.isPlaying}, vibRight: {vibRight.isPlaying}, vibBoth: {vibBoth.isPlaying}");
         }
         trialVibStop = Time.time;
         vibLeft.Stop();
         vibRight.Stop();
         vibBoth.Stop();
+        Debug.Log("Vib stopped");
         vibrationTriggered = false;
     }
 
@@ -615,6 +718,7 @@ public class TaskRunner : MonoBehaviour
         string instructions2 = "\n\nWhen you have read the instructions and is ready to start the task, " +
         "press and hold B for 1 second.";
         blockInstructionsText.text = instructions + instructions2;
+        Debug.Log(instructions + instructions2);
         float timer = 0f;
         while (timer < 1f)
         {
@@ -727,17 +831,43 @@ public class TaskRunner : MonoBehaviour
                 pointsForCalibration.Add(rightHandAnchor.transform.position);
                 lastAngleDiff = angleDiff;
             }
+            if (OVRInput.GetDown(OVRInput.Button.One)) // reset if necessary
+            {
+                lastAngleDiff = 0;
+
+                pointsForCalibration = new List<Vector3>();
+                initialRotation = rightHandAnchor.transform.rotation;
+
+                pointsForCalibration.Add(rightHandAnchor.transform.position);
+            }
             yield return null;
         }
         Destroy(instructionsArrow);
         savePointsForCalibrationComplete = true;
     }
+    IEnumerator RotatePacer(Vector3 startPos, Vector3 endPos, float duration)
+    {
+        Debug.Log("rotatePacer started");
+        positionPacerScript.Visible(true);
+        Quaternion startRotation = Quaternion.LookRotation(startPos - rotationPacer.transform.position);
+        Quaternion endRotation = Quaternion.LookRotation(endPos - rotationPacer.transform.position);
 
-    //public void StartCalibration()
-    //{
-    //    StartCoroutine(calibrateRotatingArmLocation());
-    //}
+        float elapsedTime = 0f;
+        //float duration = Mathf.Abs(Quaternion.Angle(startRotation, endRotation))/pacerDegsPerSec;
+        while (elapsedTime < duration)
+        {
+            float t = elapsedTime / duration; 
+            float easedT = Easing.IntegratedLognormal(t, 0.3f, 0.7f); 
+            //float easedT = Easing.SymmetricQuad(t); 
+            //rotationPacer.transform.rotation = Quaternion.Slerp(startRotation, endRotation, t);
+            rotationPacer.transform.rotation = Quaternion.Slerp(startRotation, endRotation, easedT);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
 
+        rotationPacer.transform.rotation = endRotation;
+        positionPacerScript.Visible(false);
+    }
     private void CalibrateCircleCenter(List<Vector3> points, int nSets = 10)
     {
         if (points.Count % 3 != 0)
@@ -750,7 +880,7 @@ public class TaskRunner : MonoBehaviour
         List<Vector3> pointsA = points.GetRange(0, segmentLength);
         List<Vector3> pointsB = points.GetRange(segmentLength, segmentLength);
         List<Vector3> pointsC = points.GetRange(2 * segmentLength, segmentLength);
-
+        
         int loopCount = Mathf.Min(nSets, segmentLength);
         List<Vector3> centers = new List<Vector3>();
 
@@ -820,6 +950,9 @@ public class TaskRunner : MonoBehaviour
         gripModel.transform.localPosition = new Vector3(0, 0, -(radius+0.003f));
         positionProjected.transform.localPosition = new Vector3(0, 0, radius);
         positionOffsetProjected.transform.localPosition = new Vector3(0, 0, radius);
+        positionPacer.transform.localPosition = new Vector3(0, 0, radius);
+        A1dPos.transform.localPosition = new Vector3(0, 0, radius);
+        B1dPos.transform.localPosition = new Vector3(0, 0, radius);
 
 
         positionToOffsetFrom.transform.position = new Vector3(positionToOffsetFrom.transform.position.x, rotatingArm.transform.position.y, positionToOffsetFrom.transform.position.z);
@@ -851,5 +984,53 @@ public class TaskRunner : MonoBehaviour
         float angle = Mathf.Atan2(det, dot) * Mathf.Rad2Deg*-1;
 
         return angle;
+    }
+    public class Easing
+    {
+        public static float IntegratedLognormal(float t, float peak, float sigma, int steps = 100)
+        {
+            // Clamp t to ensure it's within a valid range
+            t = Mathf.Clamp(t, 0f, 1f);
+
+            // Initialize integration variables
+            float integration = 0f;
+            float maxIntegration = 0f;
+            float dt = 1f / steps; // Step size
+
+            // Numerically integrate the lognormal curve using the trapezoidal rule
+            for (int i = 0; i <= steps; i++)
+            {
+                float currentT = i * dt; // Current time step
+                float nextT = (i + 1) * dt; // Next time step
+                float currentValue = Lognormal(currentT, peak, sigma);
+                float nextValue = Lognormal(nextT, peak, sigma);
+
+                // Trapezoidal rule: integrate between current and next steps
+                integration += (currentValue + nextValue) * dt * 0.5f;
+
+                // Normalize integration based on max value
+                if (i == steps)
+                    maxIntegration = integration;
+
+                // If we've reached or exceeded t, return the normalized value
+                if (currentT >= t)
+                    return integration / maxIntegration;
+            }
+
+            return integration / maxIntegration;
+        }
+
+        private static float Lognormal(float t, float peak, float sigma)
+        {
+            // Avoid log(0) by clamping
+            t = Mathf.Clamp(t, 0.0001f, 1.0f);
+            float mu = Mathf.Log(peak); // Mean to align the peak
+            return Mathf.Exp(-Mathf.Pow(Mathf.Log(t) - mu, 2) / (2 * sigma * sigma))
+                / (t * sigma * Mathf.Sqrt(2 * Mathf.PI));
+        }
+        float SymmetricQuad(float t)
+        {
+            return t < 0.5f ? 2f * t * t : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f;
+        }
     }
 }
