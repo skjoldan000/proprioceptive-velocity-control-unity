@@ -18,6 +18,7 @@ public class TaskRunner : MonoBehaviour
 
     // Objects and attached scripts
     private Config c;
+    private FrameTimer frameTimer;
     public TextMeshPro blockInstructionsText;
     public GenerateInstructions generateInstructions;
     public GameObject trialSpaceAll;
@@ -128,7 +129,8 @@ public class TaskRunner : MonoBehaviour
     public float angleStartToOffsetController;
     private List<Vector3> pointsForCalibration;
     private int nDims;
-    public ArduinoReciever arduinoReciever;
+    //public ArduinoReciever arduinoReciever;
+    public ArduinoDualReciever arduinoReciever;
 
     // Results to save
     private Vector3 startPos;
@@ -141,6 +143,7 @@ public class TaskRunner : MonoBehaviour
     void Start()
     {
         c = GetComponent<Config>();
+        frameTimer = GetComponent<FrameTimer>();
         trialSpaceScript = trialSpace.GetComponent<ControlSphere>();
         trialTargetScript = trialTarget.GetComponent<ControlSphere>();
         trialStartScript = trialStart.GetComponent<ControlSphere>();
@@ -174,7 +177,6 @@ public class TaskRunner : MonoBehaviour
         B1dPosScript.Visible(false);
         positionPacerScript.Visible(false);
         Debug.Log("TaskRunner start completed");
-
     }
 
     public void StartTrial(Trial trial)
@@ -186,6 +188,12 @@ public class TaskRunner : MonoBehaviour
     public void EndTrialCoroutine()
     {
         StopCoroutine(currentTrialCR);
+    }
+
+    private void ResetTimers()
+    {
+        frameTimer.StartSessionStopwatch();
+        arduinoReciever.SendTrigger("zerotimer");
     }
 
     IEnumerator TrialCoroutine(Trial trial)
@@ -678,7 +686,7 @@ public class TaskRunner : MonoBehaviour
         {
             Debug.LogError($"vibration was set to: {vibration}. Must be either left, right, both or none");
         }
-        
+
         for (int i = 0; i < 30; i++)
         {
             yield return null;

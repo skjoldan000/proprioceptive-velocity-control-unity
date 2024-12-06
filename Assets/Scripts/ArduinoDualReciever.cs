@@ -7,7 +7,8 @@ using System.IO;
 using UXF;
 using System.Globalization;
 
-public class ArduinoReceiver : MonoBehaviour {
+
+public class ArduinoDualReciever : MonoBehaviour {
     // Serial Port and Thread for MPU Arduino
     private SerialPort mpuSerialPort;
     private Thread mpuSerialThread;
@@ -43,7 +44,6 @@ public class ArduinoReceiver : MonoBehaviour {
 
     // Timing variables
     private System.Diagnostics.Stopwatch stopwatch; 
-    public float alignedStopwatch;
     private float stopwatchOffset;
     public bool offsetApplied = false;
     private int linesToProcess = 100;
@@ -85,25 +85,14 @@ public class ArduinoReceiver : MonoBehaviour {
         }
     }
 
-    public void AlignStopwatch()
-    {
-        stopwatchOffset = (Time.time - (stopwatch.ElapsedMilliseconds/1000f));
-    }
 
     void Update() {
         if (isRunning)
         {
-            alignedStopwatch = (stopwatch.ElapsedMilliseconds/1000f) + stopwatchOffset;
             if (saving)
             {
                 ProcessQueueData(mpuSerialQueue, linesToProcess, ParseAndProcessMPUData);
                 ProcessQueueData(audioSerialQueue, linesToProcess, ParseAndProcessAudioData);
-            }
-            if (!offsetApplied)
-            {
-                stopwatchOffset = (Time.time - (stopwatch.ElapsedMilliseconds/1000f));
-                ResetSerialQueues();
-                offsetApplied = true;
             }
         }
     }
@@ -273,7 +262,7 @@ public class ArduinoReceiver : MonoBehaviour {
         }
     }
 
-    public void ResetSerialQueues()
+    public void ResetSerialQueue()
     {
         if (isRunning)
         {

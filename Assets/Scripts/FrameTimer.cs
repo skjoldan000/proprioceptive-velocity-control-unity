@@ -11,8 +11,10 @@ public class FrameTimer : MonoBehaviour
         FrameStopwatch = new Stopwatch();
         SessionStopwatch = new Stopwatch();
     }
-    void Start()
+
+    public void StartSessionStopwatch()
     {
+        SessionStopwatch.Reset();
         SessionStopwatch.Start();
     }
 
