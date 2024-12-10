@@ -21,11 +21,18 @@ public class ControlSphere : MonoBehaviour
     }
     public void PositionSphere(Vector3 requestedPosition)
     {
-        obj.transform.localPosition = requestedPosition;
+        Vector3 scale = obj.transform.localScale;
+        Vector3 adjustedPosition = new Vector3(
+            requestedPosition.x,// / scale.x,
+            requestedPosition.y,// / scale.y,
+            requestedPosition.z// / scale.z
+        );
+        
+        obj.transform.localPosition = adjustedPosition;
     }
-    public void RotateSphere(Quaternion requestedRotation)
+    public void RotateAnchor(Quaternion requestedRotation)
     {
-        obj.transform.rotation = requestedRotation;
+        transform.rotation = requestedRotation;
     }
 
     public void ColorObj(Material requestedColor)

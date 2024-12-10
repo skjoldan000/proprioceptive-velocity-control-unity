@@ -63,6 +63,7 @@ public class AudioLatencyTester : MonoBehaviour
     IEnumerator TestLatency()
     {
         arduinoReciever.InitTrialDataFrame(Session.instance.CurrentTrial);
+        arduinoReciever.ResetSerialQueue();
         arduinoReciever.saving = true;
         sphereScript.ColorObj(standbyGrey);
         testLatencyStarted = true;

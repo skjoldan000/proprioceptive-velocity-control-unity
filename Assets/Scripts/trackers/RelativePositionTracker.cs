@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace UXF
 {
-    public class RelativePositionRotationTracker : Tracker
+    public class RelativePositionTracker : Tracker
     {
         public override string MeasurementDescriptor => "movement";
         public override IEnumerable<string> CustomHeader => new string[] {

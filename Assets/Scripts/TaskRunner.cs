@@ -58,7 +58,7 @@ public class TaskRunner : MonoBehaviour
     public GameObject rotatingArm;
     public GameObject rotatingArmObj;
     public GameObject positionToOffsetFrom;
-    public GameObject rotationToOffsetFrom;
+    // public GameObject rotationToOffsetFrom;
     public GameObject positionProjected;
     public GameObject rotationProjected;
     public GameObject positionOffsetProjected;
@@ -75,6 +75,10 @@ public class TaskRunner : MonoBehaviour
     public GameObject B1d;
     public GameObject B1dPos;
     private ControlSphere B1dPosScript;
+    public GameObject D1targetSpaceRotation;
+    private float visualSpeedOffsetStartFraction;
+    private float visualSpeedOffsetEndFraction;
+    private float angleStartToControllerLastFrame;
 
     // Materials
     public Material targetGreen;
@@ -96,10 +100,12 @@ public class TaskRunner : MonoBehaviour
     public string trialProgress;
     public string trialID;
     public int targetNumber;
+    private bool trialEndButtonPressed = false;
 
     // Coroutines
     private Coroutine currentTrialCR;
     private Coroutine calibrationCR;
+    private Coroutine vibrationCR;
     private Coroutine ControllerVisibilityCR;
 
     // Timers
@@ -108,8 +114,8 @@ public class TaskRunner : MonoBehaviour
     private float trialControlVisibilityOffTime;
     private float trialControlVisibilityOnTime;
     private float trialInputTime;
-    private float trialVibStart;
-    private float trialVibStop;
+    private double trialVibStart;
+    private double trialVibStop;
 
 
     // Vibration source
@@ -127,6 +133,7 @@ public class TaskRunner : MonoBehaviour
     private float radiusSD;
     public float angleStartToController;
     public float angleStartToOffsetController;
+    public float angleStartToPacer;
     private List<Vector3> pointsForCalibration;
     private int nDims;
     //public ArduinoReciever arduinoReciever;
@@ -149,8 +156,10 @@ public class TaskRunner : MonoBehaviour
         trialStartScript = trialStart.GetComponent<ControlSphere>();
         controllerSphereScript = controllerSphere.GetComponent<ControlSphere>();
         debugSphereScript = debugSphere.GetComponent<ControlSphere>();
+        debugSphereScript.PositionSphere(buttonA.transform.localPosition);
         trackedDeskScript = trackedDesk.GetComponent<PositionDesk>();
         RotatingArmScript = RotatingArm.GetComponent<ControlRotatingArmrest>();
+
 
         //relating to rotating armrest
         positionToOffsetFromScript = positionToOffsetFrom.GetComponent<ControlSphere>();
@@ -160,6 +169,16 @@ public class TaskRunner : MonoBehaviour
         A1dPosScript = A1dPos.GetComponent<ControlSphere>();
         B1dPosScript = B1dPos.GetComponent<ControlSphere>();
 
+        // apply visual offsets to match thumb button position
+        controllerSphereScript.PositionSphere(buttonA.transform.localPosition);
+        positionOffsetProjectedScript.PositionSphere(buttonA.transform.localPosition);
+        debugSphereScript.PositionSphere(buttonA.transform.localPosition);
+        A1dPosScript.PositionSphere(buttonA.transform.localPosition);
+        B1dPosScript.PositionSphere(buttonA.transform.localPosition);
+        positionPacerScript.PositionSphere(buttonA.transform.localPosition);
+        controllerSphereScript.PositionSphere(buttonA.transform.localPosition);
+        trialStartScript.PositionSphere(buttonA.transform.localPosition);
+        trialTargetScript.PositionSphere(buttonA.transform.localPosition);
 
         if (trialStartScript == null)
         {
@@ -200,7 +219,7 @@ public class TaskRunner : MonoBehaviour
     IEnumerator TrialCoroutine(Trial trial)
     {
         ResetTimers(); 
-        
+        trialEndButtonPressed = false;
 
         arduinoReciever.InitTrialDataFrame(trial);
 
@@ -253,6 +272,7 @@ public class TaskRunner : MonoBehaviour
             controllerSphereScript.Visible(false);
             trialProgress = "calibrationStarted";
             Debug.Log("Calibration started");
+            rightControllerAnchor.SetActive(true);
             if (trial.settings.GetInt("nDims") == 1)
             {
                 calibrationCR = StartCoroutine(calibration1d());
@@ -265,8 +285,9 @@ public class TaskRunner : MonoBehaviour
                 yield return new WaitUntil(() => (calibrationComplete));
                 StopCoroutine(calibrationCR);
             }
+            rightControllerAnchor.SetActive(false);
+            offsetControllerAnchor.SetActive(false);
             leftControllerAnchor.SetActive(false);
-            controllerSphereScript.Visible(true);
             Debug.Log("Calibration completed");
             trial.End();
             yield return new WaitForSeconds(0.5f);
@@ -288,9 +309,22 @@ public class TaskRunner : MonoBehaviour
 
         if (nDims == 1)
         {
+            visualSpeedOffsetStartFraction = trial.settings.GetFloat("visualSpeedOffsetStartFraction");
+            visualSpeedOffsetEndFraction = trial.settings.GetFloat("visualSpeedOffsetEndFraction");
+
+            controllerSphereScript.Visible(false);
+            positionOffsetProjectedScript.Visible(true);
+            rotatingArmObj.SetActive(false);
+            offsetControllerAnchor.SetActive(false);
+
             Debug.Log("nDims1 started");
-            Vector3 dirToStart = Quaternion.Euler(0, -43.0f, 0) * (leftHandAnchor.transform.position - rotatingArmSpace.transform.position);
+            Vector3 dirToStart = Quaternion.Euler(0, -43.0f, 0) * (
+                new Vector3(
+                    leftHandAnchor.transform.position.x,
+                    rightHandAnchor.transform.position.y,
+                    leftHandAnchor.transform.position.z) - rotatingArmSpace.transform.position);
             Vector3 dirToEnd = Quaternion.Euler(0, trial.settings.GetFloat("targetDegrees"), 0) * dirToStart;
+            D1targetSpaceRotation.transform.rotation = Quaternion.LookRotation(dirToStart);
             A1d.transform.rotation = Quaternion.LookRotation(dirToStart);
             B1d.transform.rotation = Quaternion.LookRotation(dirToEnd);
             A1dPosScript.Visible(true);
@@ -319,14 +353,17 @@ public class TaskRunner : MonoBehaviour
                         if (!readyButtonPressed)
                         {
                             initiateRotation = rotationProjected.transform.rotation;
+                            D1targetSpaceRotation.transform.rotation = rotationProjected.transform.rotation;
+                            arduinoReciever.ResetSerialQueue();
+                            arduinoReciever.saving = true;
                         }
-                        arduinoReciever.saving = true;
-                        A1d.transform.rotation = rotationProjected.transform.rotation;
+                        // Vector3 dirToStartAdjusted = 
+                        // Vector3 dirToEndAdjusted = Quaternion.Euler(0, trial.settings.GetFloat("targetDegrees"), 0) * dirToStart;
                         readyButtonPressed = true;
                         A1dPosScript.ColorObj(readyYellow);
                         B1dPosScript.ColorObj(readyYellow);
                         timer += Time.deltaTime;
-                        Debug.Log($"Keep stationary for {0.5f - timer}");
+                        //Debug.Log($"Keep stationary for {0.5f - timer}");
                     }
                 }
                 else if (readyButtonPressed && angle > 0.5)
@@ -336,7 +373,7 @@ public class TaskRunner : MonoBehaviour
                     readyButtonPressed = false;
                     A1dPosScript.ColorObj(startTeal);
                     B1dPosScript.ColorObj(standbyGrey);
-                    A1d.transform.rotation = Quaternion.LookRotation(dirToStart);
+                    D1targetSpaceRotation.transform.rotation = Quaternion.LookRotation(dirToStart);
                     if (arduinoReciever.saving)
                     {
                         arduinoReciever.ResetSerialQueue();
@@ -349,7 +386,7 @@ public class TaskRunner : MonoBehaviour
                     readyButtonPressed = false;
                     A1dPosScript.ColorObj(startTeal);
                     B1dPosScript.ColorObj(standbyGrey);
-                    A1d.transform.rotation = Quaternion.LookRotation(dirToStart);
+                    D1targetSpaceRotation.transform.rotation = Quaternion.LookRotation(dirToStart);
                     if (arduinoReciever.saving)
                     {
                         arduinoReciever.ResetSerialQueue();
@@ -359,12 +396,30 @@ public class TaskRunner : MonoBehaviour
                 yield return null;
                 
             }
+            positionToOffsetFrom.transform.position = rightHandAnchor.transform.position;
+            positionToOffsetFrom.transform.rotation = rightHandAnchor.transform.rotation;
+            angleMultiplier = trial.settings.GetFloat("angleMultiplier");
+            vibrationCR = StartCoroutine(Vibration(trial));
+            
             A1dPosScript.Visible(false);
             B1dPosScript.ColorObj(targetGreen);
             Debug.Log($"Trial 1d started");
-            StartCoroutine(RotatePacer(A1dPos.transform.position, B1dPos.transform.position, 2.0f));
-            yield return new WaitUntil(() => (OVRInput.GetDown(OVRInput.Button.One)));
 
+            float duration = 2.5f;
+            float extraDegs = -20f;
+            if (trial.settings.GetBool("rotationPacer"))
+            {
+                Vector3 dirToPacerStart = rotatingArmSpace.transform.position + Quaternion.Euler(0, extraDegs, 0) * (A1dPos.transform.position - rotatingArmSpace.transform.position);
+                StartCoroutine(RotatePacer(
+                    dirToPacerStart, 
+                    B1dPos.transform.position, 
+                    duration * (Mathf.Abs(extraDegs) + Mathf.Abs(trial.settings.GetInt("targetDegrees"))) / trial.settings.GetInt("targetDegrees")));
+                Debug.Log($"total pacer duration set to {duration * (extraDegs + trial.settings.GetInt("targetDegrees")) / trial.settings.GetInt("targetDegrees")}");
+            }
+            yield return new WaitUntil(() => (angleStartToController > 10));
+            yield return new WaitUntil(() => (OVRInput.GetDown(OVRInput.Button.One)));
+            trialEndButtonPressed = true;
+            StopCoroutine(vibrationCR);
         }
         else if (nDims == 2)
         {
@@ -540,24 +595,31 @@ public class TaskRunner : MonoBehaviour
 
         if (nDims == 1 & calibrationArmrestComplete)
         {
-            rightControllerAnchor.SetActive(false);
-            offsetControllerAnchor.SetActive(true);
 
             angleStartToController = CalculateAngleDirectional(positionToOffsetFrom, rightHandAnchor, rotatingArm);
-            angleStartToOffsetController = angleStartToController * angleMultiplier;
+            float angleChange = angleStartToController - angleStartToControllerLastFrame;
+            float movementFraction = (angleStartToController / Session.instance.CurrentTrial.settings.GetFloat("targetDegrees"));
+            if (movementFraction >= Session.instance.CurrentTrial.settings.GetFloat("visualSpeedOffsetStartFraction") &&
+                movementFraction <= Session.instance.CurrentTrial.settings.GetFloat("visualSpeedOffsetEndFraction"))
+            {
+                angleStartToOffsetController = angleStartToOffsetController + (angleChange * angleMultiplier);
+            }
+            else
+            {
+                angleStartToOffsetController = angleStartToOffsetController + (angleChange);
+            }
+
+            angleStartToPacer = CalculateAngleDirectional(positionToOffsetFrom, positionPacer, rotatingArm);
+
+
             Vector3 dirToController = rightHandAnchor.transform.position - rotatingArm.transform.position;
             Vector3 dirToStart = positionToOffsetFrom.transform.position - rotatingArm.transform.position;
             Vector3 dirToOffsetController = Quaternion.Euler(0, angleStartToOffsetController, 0) * dirToStart;
-
+            angleStartToControllerLastFrame = CalculateAngleDirectional(positionToOffsetFrom, rightHandAnchor, rotatingArm);
             //rotatingArm.transform.forward = dirToStart;
 
             rotatingArm.transform.forward = dirToOffsetController;
             rotationProjected.transform.forward = dirToController;
-        }
-        else if (nDims == 1 & !calibrationArmrestComplete)
-        {
-            rightControllerAnchor.SetActive(true);
-            offsetControllerAnchor.SetActive(false);
         }
 
         // debug objs
@@ -565,8 +627,7 @@ public class TaskRunner : MonoBehaviour
         VRConsole.SetActive(showConsole);
         debugSphereScript.Visible(showDebugSphere);
         positionToOffsetFromScript.Visible(showDebugSpheresRotation);
-        positionProjectedScript.Visible(showDebugSpheresRotation);
-        positionOffsetProjectedScript.Visible(showDebugSpheresRotation);
+        positionProjectedScript.Visible(showDebugSphere);
     }
     IEnumerator ConfirmQuitCR()
     {
@@ -663,52 +724,56 @@ public class TaskRunner : MonoBehaviour
     IEnumerator Vibration(Trial trial)
     {
         string vibration = trial.settings.GetString("vibration");
-        trialVibStart = Time.time;
-        vibrationTriggered = true;
+        if (trial.settings.GetFloat("vibrationStartFraction") > 0f){
+            yield return new WaitUntil(() => (Mathf.Abs(angleStartToController)/Mathf.Abs(trial.settings.GetFloat("targetDegrees")) >= trial.settings.GetFloat("vibrationStartFraction")));
+            Debug.Log($"delayed vibration started, fraction: {Mathf.Abs(angleStartToController)/Mathf.Abs(trial.settings.GetFloat("targetDegrees"))}");
+        }
+        int frameCounter = 0;
+        trialVibStart = Time.time + FrameTimer.FrameStopwatch.Elapsed.TotalMilliseconds/1000.0;
+        arduinoReciever.SendTrigger("true");
         if (vibration == "left")
         {
             vibLeft.Play();
-            Debug.Log("vib left started");
         }
         else if (vibration == "right")
         {
             vibRight.Play();
-            Debug.Log("vib right started");
         }
         else if (vibration == "both")
         {
             vibBoth.Play();
-            Debug.Log("vib both started");
         }
         else if (vibration == "none")
         {
-            Debug.Log("No vib started");
         }
         else
         {
             Debug.LogError($"vibration was set to: {vibration}. Must be either left, right, both or none");
         }
-
-        for (int i = 0; i < 30; i++)
+        Debug.Log($"Vibration {vibration} started");
+        if (trial.settings.GetFloat("vibrationEndFraction") < 1f)
         {
-            yield return null;
-            //Debug.Log($"vibLeft: {vibLeft.isPlaying}, vibRight: {vibRight.isPlaying}, vibBoth: {vibBoth.isPlaying}");
+            yield return new WaitUntil(() => (Mathf.Abs(angleStartToController)/Mathf.Abs(trial.settings.GetFloat("targetDegrees")) >= trial.settings.GetFloat("vibrationEndFraction")));
+            Debug.Log($"early vibration stop {Mathf.Abs(angleStartToController)/Mathf.Abs(trial.settings.GetFloat("targetDegrees"))}");
         }
-        trialVibStop = Time.time;
+        else{
+            yield return new WaitUntil(() => (trialEndButtonPressed));
+        }
+        trialVibStop = Time.time + FrameTimer.FrameStopwatch.Elapsed.TotalMilliseconds/1000.0;
+        arduinoReciever.SendTrigger("false");
         vibLeft.Stop();
         vibRight.Stop();
         vibBoth.Stop();
-        Debug.Log("Vib stopped");
-        vibrationTriggered = false;
+        Debug.Log($"vibration {vibration} stopped, with duration: {trialVibStop - trialVibStart}");
     }
 
     IEnumerator BlockInstructions(Trial trial)
     {
         controllerSphereScript.Visible(false);
-        rightControllerAnchor.SetActive(true);
         GameObject b_instructionsArrow = null;
         if (nDims == 1)
         {
+            offsetControllerAnchor.SetActive(true);
             b_instructionsArrow = generateInstructions.InstantiateArrowText(
                 buttonBoffset,
                 "Starting new task!\n Look up and read instructions. Press and hold here when ready to start.",
@@ -717,6 +782,7 @@ public class TaskRunner : MonoBehaviour
         }
         else if (nDims == 2)
         {
+            rightControllerAnchor.SetActive(true);
             b_instructionsArrow = generateInstructions.InstantiateArrowText(
                 buttonB,
                 "Starting new task!\n Look up and read instructions. Press and hold here when ready to start.",
@@ -744,6 +810,7 @@ public class TaskRunner : MonoBehaviour
         }
         Destroy(b_instructionsArrow);
         blockInstructionsText.text = instructions;
+        offsetControllerAnchor.SetActive(false);
         rightControllerAnchor.SetActive(false);
         controllerSphereScript.Visible(true);
         blockInstructionsComplete = true;
@@ -777,6 +844,7 @@ public class TaskRunner : MonoBehaviour
     {
         return reference.InverseTransformPoint(target.position);
     }
+
     private void PrintTrialConditions(Trial trial)
     {
         Debug.Log($"Block no: {Session.instance.currentBlockNum}, Trial no: {Session.instance.currentTrialNum}, Trial no in block: {Session.instance.CurrentTrial.numberInBlock}");
@@ -808,7 +876,7 @@ public class TaskRunner : MonoBehaviour
         
 
         calibrationArmrestComplete = true;
-        rotatingArmObj.SetActive(true);
+        rotatingArmObj.SetActive(false);
         Debug.LogWarning("Calibration completed");
         Debug.LogWarning("radius " + radius);
         Debug.LogWarning("radius SD " + radiusSD);
@@ -857,6 +925,7 @@ public class TaskRunner : MonoBehaviour
     }
     IEnumerator RotatePacer(Vector3 startPos, Vector3 endPos, float duration)
     {
+        positionPacerScript.ColorObj(activeBlue);
         Debug.Log("rotatePacer started");
         positionPacerScript.Visible(true);
         Quaternion startRotation = Quaternion.LookRotation(startPos - rotationPacer.transform.position);
@@ -867,16 +936,17 @@ public class TaskRunner : MonoBehaviour
         while (elapsedTime < duration)
         {
             float t = elapsedTime / duration; 
-            float easedT = Easing.IntegratedLognormal(t, 0.3f, 0.7f); 
-            //float easedT = Easing.SymmetricQuad(t); 
-            //rotationPacer.transform.rotation = Quaternion.Slerp(startRotation, endRotation, t);
-            rotationPacer.transform.rotation = Quaternion.Slerp(startRotation, endRotation, easedT);
+            // float easedT = Easing.IntegratedLognormal(t, 0.3f, 0.7f); 
+            float easedT = Easing.SymmetricQuad(t); 
+            rotationPacer.transform.rotation = Quaternion.Slerp(startRotation, endRotation, t);
+            // rotationPacer.transform.rotation = Quaternion.Slerp(startRotation, endRotation, easedT);
             elapsedTime += Time.deltaTime;
             yield return null;
         }
 
         rotationPacer.transform.rotation = endRotation;
         positionPacerScript.Visible(false);
+        Debug.Log("rotatePacer ended");
     }
     private void CalibrateCircleCenter(List<Vector3> points, int nSets = 10)
     {
@@ -964,8 +1034,6 @@ public class TaskRunner : MonoBehaviour
         A1dPos.transform.localPosition = new Vector3(0, 0, radius);
         B1dPos.transform.localPosition = new Vector3(0, 0, radius);
 
-
-
         positionToOffsetFrom.transform.position = new Vector3(positionToOffsetFrom.transform.position.x, rotatingArm.transform.position.y, positionToOffsetFrom.transform.position.z);
         angleStartToController = CalculateAngleDirectional(positionToOffsetFrom, rightHandAnchor, rotatingArm);
         angleStartToOffsetController = angleStartToController * angleMultiplier;
@@ -981,14 +1049,15 @@ public class TaskRunner : MonoBehaviour
 
         Vector3 buttonAVisualOffset = buttonA.transform.localPosition;
 
-        A1dPosScript.PositionSphere(buttonAVisualOffset);
-        A1dPosScript.RotateSphere(rightHandAnchorRotation);
+        // A1dPosScript.PositionSphere(buttonAVisualOffset);
+        //A1dPosScript.RotateAnchor(rightHandAnchorRotation);
         
-        B1dPosScript.PositionSphere(buttonAVisualOffset);
-        B1dPosScript.RotateSphere(rightHandAnchorRotation);
+        // B1dPosScript.PositionSphere(buttonAVisualOffset);
+       //B1dPosScript.RotateAnchor(rightHandAnchorRotation);
         
-        positionPacerScript.PositionSphere(buttonAVisualOffset);
-        positionPacerScript.RotateSphere(rightHandAnchorRotation);
+        // positionPacerScript.PositionSphere(buttonAVisualOffset);
+        //positionPacerScript.RotateAnchor(rightHandAnchorRotation);
+        // Debug.Log($"visual offset of {buttonAVisualOffset} applied");
         
     }
     private float CalculateAngleDirectional(GameObject At, GameObject Bt, GameObject Ct)
@@ -1014,35 +1083,46 @@ public class TaskRunner : MonoBehaviour
     {
         public static float IntegratedLognormal(float t, float peak, float sigma, int steps = 100)
         {
-            // Clamp t to ensure it's within a valid range
-            t = Mathf.Clamp(t, 0f, 1f);
+            t = Mathf.Clamp01(t);
+            float dt = 1f / steps;
 
-            // Initialize integration variables
-            float integration = 0f;
+            // First: integrate the full curve from 0 to 1
             float maxIntegration = 0f;
-            float dt = 1f / steps; // Step size
-
-            // Numerically integrate the lognormal curve using the trapezoidal rule
-            for (int i = 0; i <= steps; i++)
+            for (int i = 0; i < steps; i++)
             {
-                float currentT = i * dt; // Current time step
-                float nextT = (i + 1) * dt; // Next time step
+                float currentT = i * dt;
+                float nextT = (i + 1) * dt;
                 float currentValue = Lognormal(currentT, peak, sigma);
                 float nextValue = Lognormal(nextT, peak, sigma);
-
-                // Trapezoidal rule: integrate between current and next steps
-                integration += (currentValue + nextValue) * dt * 0.5f;
-
-                // Normalize integration based on max value
-                if (i == steps)
-                    maxIntegration = integration;
-
-                // If we've reached or exceeded t, return the normalized value
-                if (currentT >= t)
-                    return integration / maxIntegration;
+                maxIntegration += (currentValue + nextValue) * 0.5f * dt;
             }
 
-            return integration / maxIntegration;
+            // Then integrate from 0 to t
+            float partialIntegration = 0f;
+            int fullSteps = Mathf.FloorToInt(t * steps);
+            for (int i = 0; i < fullSteps; i++)
+            {
+                float currentT = i * dt;
+                float nextT = (i + 1) * dt;
+                float currentValue = Lognormal(currentT, peak, sigma);
+                float nextValue = Lognormal(nextT, peak, sigma);
+                partialIntegration += (currentValue + nextValue) * 0.5f * dt;
+            }
+
+            // If t doesn't land exactly on a step boundary, integrate the remainder fraction
+            float remainder = (t * steps) - fullSteps;
+            if (remainder > 0f)
+            {
+                float currentT = fullSteps * dt;
+                float nextT = t;
+                float currentValue = Lognormal(currentT, peak, sigma);
+                float nextValue = Lognormal(nextT, peak, sigma);
+                float partialDt = nextT - currentT;
+                partialIntegration += (currentValue + nextValue) * 0.5f * partialDt;
+            }
+
+            return partialIntegration / maxIntegration;
+
         }
 
         private static float Lognormal(float t, float peak, float sigma)
@@ -1053,9 +1133,10 @@ public class TaskRunner : MonoBehaviour
             return Mathf.Exp(-Mathf.Pow(Mathf.Log(t) - mu, 2) / (2 * sigma * sigma))
                 / (t * sigma * Mathf.Sqrt(2 * Mathf.PI));
         }
-        float SymmetricQuad(float t)
+        public static float SymmetricQuad(float t)
         {
             return t < 0.5f ? 2f * t * t : 1f - Mathf.Pow(-2f * t + 2f, 2f) / 2f;
         }
+        
     }
 }

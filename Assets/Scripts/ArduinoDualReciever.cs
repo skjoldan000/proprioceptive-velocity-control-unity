@@ -55,29 +55,47 @@ public class ArduinoDualReciever : MonoBehaviour {
         InitSerialPort(ref audioSerialPort, audioCOMPort, ref audioSerialThread, ReadAudioSerialData);
     }
     
-    void InitSerialPort(ref SerialPort serialPort, string COMPort, ref Thread serialThread, ThreadStart threadStart) {
+    void InitSerialPort(ref SerialPort serialPort, string COMPort, ref Thread serialThread, ThreadStart threadStart)
+    {
         try
         {
+            // Initialize the SerialPort object
             serialPort = new SerialPort(COMPort, Baudrate);
             serialPort.ReadTimeout = 10; // Prevent blocking
+
+            // Attempt to open the port to trigger a reset
             serialPort.Open();
+            Debug.Log($"Serial port {COMPort} opened for reset.");
+            System.Threading.Thread.Sleep(100); 
+            serialPort.Close();
+            Debug.Log($"Serial port {COMPort} closed to complete reset.");
+
+            // Wait to allow the Arduino to reinitialize
+            System.Threading.Thread.Sleep(1000); 
+
+            // Reopen the port for normal operations
+            serialPort.Open();
+            Debug.Log($"Serial port {COMPort} reopened for communication.");
         }
         catch (System.Exception ex)
         {
-            Debug.LogError($"Error opening serial port {COMPort}: {ex.Message}");
+            Debug.LogError($"Error initializing serial port {COMPort}: {ex.Message}");
+            isRunning = false;
+            return; // Exit if there was an error
         }
 
-        // Start the serial reading thread
+        // Start the serial reading thread if the port is successfully opened
         if (serialPort.IsOpen)
         {
             serialThread = new Thread(threadStart);
             serialThread.Start();
             isRunning = true;
-            Debug.Log($"Serial port {COMPort} opened and thread started.");
+            Debug.Log($"Serial port {COMPort} opened and thread started successfully.");
         }
-        else{
+        else
+        {
             isRunning = false;
-            Debug.LogWarning($"Port not opened {COMPort}. Setting isRunning to {isRunning}");
+            Debug.LogWarning($"Port not opened {COMPort}. Setting isRunning to {isRunning}.");
         }
     }
 
@@ -182,7 +200,10 @@ public class ArduinoDualReciever : MonoBehaviour {
         }
         catch (System.Exception ex)
         {
-            Debug.LogError("Error parsing MPU data: " + ex.Message);
+            if (saving)
+            {
+                Debug.LogError("Error parsing MPU data: " + ex.Message);
+            }
         }
     }
 
@@ -219,7 +240,10 @@ public class ArduinoDualReciever : MonoBehaviour {
         }
         catch (System.Exception ex)
         {
-            Debug.LogError("Error parsing Audio data: " + ex.Message);
+            if (saving)
+            {
+                Debug.LogError("Error parsing MPU data: " + ex.Message);
+            }
         }
     }
 
