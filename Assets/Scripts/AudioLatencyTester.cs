@@ -25,7 +25,7 @@ public class AudioLatencyTester : MonoBehaviour
     public Material targetGreen;
     public Material standbyGrey;
     public GameObject backGround;
-    public ArduinoReciever arduinoReciever;
+    public ArduinoDualReciever arduinoReciever;
     public TaskRunner taskRunner;
     private Coroutine VibrationCR;
     public double frameStartToAudioStartPre;
@@ -62,16 +62,17 @@ public class AudioLatencyTester : MonoBehaviour
     }
     IEnumerator TestLatency()
     {
-        arduinoReciever.offsetApplied = false;
         arduinoReciever.InitTrialDataFrame(Session.instance.CurrentTrial);
         arduinoReciever.saving = true;
         sphereScript.ColorObj(standbyGrey);
         testLatencyStarted = true;
         Debug.Log($"TestLatency started");
+        taskRunner.ResetTimers();
         yield return new WaitForSeconds(1f);
         for (int i = 0; i < testReps; i++)
         {
             taskRunner.targetNumber = i;
+            //yield return new WaitForSeconds(.1f);
             VibrationCR = StartCoroutine(Vibration());
             yield return new WaitUntil(() => vibrationCRComplete);
             StopCoroutine(VibrationCR);
@@ -86,9 +87,9 @@ public class AudioLatencyTester : MonoBehaviour
         
         frameCounter = 0;
         trialVibStart = Time.time;
-        trialVibStartStopwatch = arduinoReciever.alignedTime;
-        arduinoReciever.SendTrigger(true);
+        arduinoReciever.SendTrigger("true");
         frameStartToAudioStartPre = FrameTimer.FrameStopwatch.Elapsed.TotalMilliseconds;
+        double vibstart = FrameTimer.TrialStopwatch.Elapsed.TotalMilliseconds;
         if (vibration == "left")
         {
             vibLeft.Play();
@@ -108,7 +109,6 @@ public class AudioLatencyTester : MonoBehaviour
         {
             Debug.LogError($"vibration was set to: {vibration}. Must be either left, right, both or none");
         }
-        frameStartToAudioStartPost = FrameTimer.FrameStopwatch.Elapsed.TotalMilliseconds;
         tmp.text = $"Frame: {frameCounter}\nTime: {timer}";
         sphereScript.ColorObj(targetGreen);
         backGround.GetComponent<Renderer>().material = targetGreen;
@@ -116,17 +116,16 @@ public class AudioLatencyTester : MonoBehaviour
         {
             yield return null;
         }
-        trialVibStopStopwatch = arduinoReciever.alignedTime;
         trialVibStop = Time.time;
-        arduinoReciever.SendTrigger(false);
+        arduinoReciever.SendTrigger("false");
         frameStartToAudioStopPre = FrameTimer.FrameStopwatch.Elapsed.TotalMilliseconds;
+        double vibstop = FrameTimer.TrialStopwatch.Elapsed.TotalMilliseconds;
         vibLeft.Stop();
         vibRight.Stop();
         vibBoth.Stop();
-        frameStartToAudioStopPost = FrameTimer.FrameStopwatch.Elapsed.TotalMilliseconds;
         sphereScript.ColorObj(standbyGrey);
         backGround.GetComponent<Renderer>().material = standbyGrey;
         vibrationCRComplete = true;
-        Debug.Log($"timing of 30 frames: {trialVibStopStopwatch - trialVibStartStopwatch}");
+        Debug.Log($"timing of 30 frames: {vibstop - vibstart}");
     }
 }

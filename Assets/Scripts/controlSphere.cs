@@ -19,6 +19,15 @@ public class ControlSphere : MonoBehaviour
     {
         transform.localPosition = requestedPosition;
     }
+    public void PositionSphere(Vector3 requestedPosition)
+    {
+        obj.transform.localPosition = requestedPosition;
+    }
+    public void RotateSphere(Quaternion requestedRotation)
+    {
+        obj.transform.rotation = requestedRotation;
+    }
+
     public void ColorObj(Material requestedColor)
     {
         obj.GetComponent<Renderer>().material = requestedColor;

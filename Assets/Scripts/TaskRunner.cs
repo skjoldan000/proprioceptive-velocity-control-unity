@@ -160,6 +160,7 @@ public class TaskRunner : MonoBehaviour
         A1dPosScript = A1dPos.GetComponent<ControlSphere>();
         B1dPosScript = B1dPos.GetComponent<ControlSphere>();
 
+
         if (trialStartScript == null)
         {
             Debug.LogError("ControlSphere component is missing on trialStart.");
@@ -190,16 +191,17 @@ public class TaskRunner : MonoBehaviour
         StopCoroutine(currentTrialCR);
     }
 
-    private void ResetTimers()
+    public void ResetTimers()
     {
-        frameTimer.StartSessionStopwatch();
+        frameTimer.StartTrialStopwatch();
         arduinoReciever.SendTrigger("zerotimer");
     }
 
     IEnumerator TrialCoroutine(Trial trial)
     {
+        ResetTimers(); 
+        
 
-        arduinoReciever.offsetApplied = false;
         arduinoReciever.InitTrialDataFrame(trial);
 
         nDims = trial.settings.GetInt("nDims");
@@ -963,6 +965,7 @@ public class TaskRunner : MonoBehaviour
         B1dPos.transform.localPosition = new Vector3(0, 0, radius);
 
 
+
         positionToOffsetFrom.transform.position = new Vector3(positionToOffsetFrom.transform.position.x, rotatingArm.transform.position.y, positionToOffsetFrom.transform.position.z);
         angleStartToController = CalculateAngleDirectional(positionToOffsetFrom, rightHandAnchor, rotatingArm);
         angleStartToOffsetController = angleStartToController * angleMultiplier;
@@ -972,7 +975,21 @@ public class TaskRunner : MonoBehaviour
         //rotatingArm.transform.forward = dirToStart;
         rotatingArm.transform.forward = dirToOffsetController;
 
-        offsetControllerAnchor.transform.rotation = rightHandAnchor.transform.rotation;
+        Quaternion rightHandAnchorRotation = rightHandAnchor.transform.rotation;
+
+        offsetControllerAnchor.transform.rotation = rightHandAnchorRotation;
+
+        Vector3 buttonAVisualOffset = buttonA.transform.localPosition;
+
+        A1dPosScript.PositionSphere(buttonAVisualOffset);
+        A1dPosScript.RotateSphere(rightHandAnchorRotation);
+        
+        B1dPosScript.PositionSphere(buttonAVisualOffset);
+        B1dPosScript.RotateSphere(rightHandAnchorRotation);
+        
+        positionPacerScript.PositionSphere(buttonAVisualOffset);
+        positionPacerScript.RotateSphere(rightHandAnchorRotation);
+        
     }
     private float CalculateAngleDirectional(GameObject At, GameObject Bt, GameObject Ct)
     {

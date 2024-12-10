@@ -47,7 +47,7 @@ public class ExperimentConstructorScript : MonoBehaviour
         }
 
 
-        else if (uxfSession.settings.GetInt("nDims") == 1)
+        else if (uxfSession.settings.GetInt("nDims") == 2)
         {
             blockNumber = 1;
             if (runBlocks.Contains(blockNumber))

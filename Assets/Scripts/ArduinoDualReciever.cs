@@ -43,16 +43,12 @@ public class ArduinoDualReciever : MonoBehaviour {
     private float audioFrequency;
 
     // Timing variables
-    private System.Diagnostics.Stopwatch stopwatch; 
-    private float stopwatchOffset;
-    public bool offsetApplied = false;
     private int linesToProcess = 100;
+    public double pcSendTime = 0;
 
     void Start() {
         accelerationTranslation = 32767 / (MPU6050_ACCEL_FS / 2);
 
-        stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        stopwatchOffset = (Time.time - (stopwatch.ElapsedMilliseconds/1000f));
         
         // Initialize Serial Ports
         InitSerialPort(ref mpuSerialPort, mpuCOMPort, ref mpuSerialThread, ReadMPUSerialData);
@@ -112,11 +108,11 @@ public class ArduinoDualReciever : MonoBehaviour {
     {
         if (isRunning)
         {
-            var mpuHeaders = new string[]{ "time", "stopwatch", "micros", "ax", "ay", "az", "signalAmplitude", "vibrationOn", "frequency" };
+            var mpuHeaders = new string[]{ "time", "frameOffset", "zeroedTime", "ax", "ay", "az", "vibrationOn", "arduinoRecievedTime", "micros" };
             currentMPUTrialDataTable = new UXFDataTable(mpuHeaders);
             Debug.Log($"MPU Initialized data table for trial {trial.number}");
 
-            var audioHeaders = new string[]{ "time", "stopwatch", "micros", "signalAmplitude", "frequency" };
+            var audioHeaders = new string[]{ "time", "frameOffset", "zeroedTime", "signalAmplitude", "vibrationOn", "arduinoRecievedTime", "micros" };
             currentAudioTrialDataTable = new UXFDataTable(audioHeaders);
             Debug.Log($"Audio Initialized data table for trial {trial.number}");
         }
@@ -140,6 +136,7 @@ public class ArduinoDualReciever : MonoBehaviour {
                 string data = serialPort.ReadLine();
                 double unityFrameTime = FrameTimer.FrameStopwatch.Elapsed.TotalMilliseconds;
                 string unityFrameTimeString = unityFrameTime.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
                 string timedData = $"{unityFrameTimeString},{data}";
                 queue.Enqueue(timedData);
             }
@@ -155,26 +152,26 @@ public class ArduinoDualReciever : MonoBehaviour {
             string[] parsedParts = data.Split(',');
             if (parsedParts.Length == 8)
             {
-                float unityFrameTime = float.Parse(parsedParts[0], System.Globalization.CultureInfo.InvariantCulture);
+                float frameOffset = float.Parse(parsedParts[0], System.Globalization.CultureInfo.InvariantCulture);
                 float unitytime = Time.time;
                 ax = float.Parse(parsedParts[1]) / 32768.0f * MPU6050_ACCEL_FS;
                 ay = float.Parse(parsedParts[2]) / 32768.0f * MPU6050_ACCEL_FS;
                 az = float.Parse(parsedParts[3]) / 32768.0f * MPU6050_ACCEL_FS;
-                mpuSignalAmplitude = int.Parse(parsedParts[4]);
-                mpuMicros = int.Parse(parsedParts[5]);
-                int vibrationOn = int.Parse(parsedParts[6]);
-                mpuFrequency = int.Parse(parsedParts[7]);
+                int vibrationOn = int.Parse(parsedParts[4]);
+                int zeroedTime = int.Parse(parsedParts[5]);
+                int arduinoRecievedTime = int.Parse(parsedParts[6]);
+                int micros = int.Parse(parsedParts[7]);
 
                 var dataRow = new UXF.UXFDataRow();
                 dataRow.Add(("time", unitytime));
-                dataRow.Add(("stopwatch", unityFrameTime));
-                dataRow.Add(("micros", mpuMicros));
+                dataRow.Add(("frameOffset", frameOffset));
+                dataRow.Add(("zeroedTime", zeroedTime));
                 dataRow.Add(("ax", ax));
                 dataRow.Add(("ay", ay));
                 dataRow.Add(("az", az));
-                dataRow.Add(("signalAmplitude", mpuSignalAmplitude));
                 dataRow.Add(("vibrationOn", vibrationOn));
-                dataRow.Add(("frequency", mpuFrequency));
+                dataRow.Add(("arduinoRecievedTime", arduinoRecievedTime));
+                dataRow.Add(("micros", micros));
 
                 currentMPUTrialDataTable.AddCompleteRow(dataRow);
             }
@@ -194,20 +191,24 @@ public class ArduinoDualReciever : MonoBehaviour {
         try
         {
             string[] parsedParts = data.Split(',');
-            if (parsedParts.Length == 4)
+            if (parsedParts.Length == 6)
             {
-                float unityFrameTime = float.Parse(parsedParts[0], System.Globalization.CultureInfo.InvariantCulture);
+                float frameOffset = float.Parse(parsedParts[0], System.Globalization.CultureInfo.InvariantCulture);
                 float unitytime = Time.time;
                 audioSignalAmplitude = int.Parse(parsedParts[1]);
-                audioMicros = int.Parse(parsedParts[2]);
-                audioFrequency = float.Parse(parsedParts[3]);
+                int vibrationOn = int.Parse(parsedParts[2]);
+                int zeroedTime = int.Parse(parsedParts[3]);
+                int arduinoRecievedTime = int.Parse(parsedParts[4]);
+                int micros = int.Parse(parsedParts[5]);
 
                 var dataRow = new UXF.UXFDataRow();
                 dataRow.Add(("time", unitytime));
-                dataRow.Add(("stopwatch", unityFrameTime));
-                dataRow.Add(("micros", audioMicros));
+                dataRow.Add(("frameOffset", frameOffset));
+                dataRow.Add(("zeroedTime", zeroedTime));
                 dataRow.Add(("signalAmplitude", audioSignalAmplitude));
-                dataRow.Add(("frequency", audioFrequency));
+                dataRow.Add(("vibrationOn", vibrationOn));
+                dataRow.Add(("arduinoRecievedTime", arduinoRecievedTime));
+                dataRow.Add(("micros", micros));
 
                 currentAudioTrialDataTable.AddCompleteRow(dataRow);
             }

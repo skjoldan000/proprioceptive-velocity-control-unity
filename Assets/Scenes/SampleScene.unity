@@ -1514,6 +1514,7 @@ GameObject:
   m_Component:
   - component: {fileID: 318267983}
   - component: {fileID: 318267984}
+  - component: {fileID: 318267985}
   m_Layer: 0
   m_Name: ArduinoReciever
   m_TagString: Untagged
@@ -1543,7 +1544,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 318267982}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b1c5b4770a3ec084f85b9d293b3aa697, type: 3}
   m_Name: 
@@ -1556,6 +1557,25 @@ MonoBehaviour:
   alignedTime: 0
   alignedStopwatch: 0
   offsetApplied: 0
+--- !u!114 &318267985
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 318267982}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1cbf412f45c46014c80e149c8f160a78, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  isRunning: 0
+  mpuCOMPort: COM20
+  audioCOMPort: COM21
+  Baudrate: 500000
+  MPU6050_ACCEL_FS: 8
+  saving: 0
+  pcSendTime: 0
 --- !u!1001 &324504863
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4200,7 +4220,7 @@ MonoBehaviour:
   showDebugSpheresRotation: 0
   showDebugSphere: 0
   showConsole: 1
-  debugAudio: 0
+  debugAudio: 1
   angleToCalibrateWith: 75
   blockInstructionsText: {fileID: 89409138}
   generateInstructions: {fileID: 1372467475}
@@ -4264,7 +4284,7 @@ MonoBehaviour:
   angleMultiplier: 1
   angleStartToController: 0
   angleStartToOffsetController: 0
-  arduinoReciever: {fileID: 318267984}
+  arduinoReciever: {fileID: 318267985}
 --- !u!114 &1287761646
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6645,7 +6665,7 @@ PrefabInstance:
     - target: {fileID: 8699051783913347957, guid: bd9614ba52e30d94c88d0a9210400ffc, type: 3}
       propertyPath: arduinoReciever
       value: 
-      objectReference: {fileID: 318267984}
+      objectReference: {fileID: 318267985}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
