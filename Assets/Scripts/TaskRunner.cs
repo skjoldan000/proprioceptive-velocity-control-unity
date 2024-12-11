@@ -23,6 +23,7 @@ public class TaskRunner : MonoBehaviour
     public GenerateInstructions generateInstructions;
     public GameObject trialSpaceAll;
     public GameObject trialSpaceSetup;
+    public GameObject trialSpaceRotatedMovementSpace;
     public GameObject trialSpaceSetupForwardBack;
     public GameObject trialSpaceSetupLateral;
     public GameObject trialSpace;
@@ -62,7 +63,7 @@ public class TaskRunner : MonoBehaviour
     public GameObject positionProjected;
     public GameObject rotationProjected;
     public GameObject positionOffsetProjected;
-    private ControlSphere positionToOffsetFromScript;
+    // private ControlSphere positionToOffsetFromScript;
     private ControlSphere positionProjectedScript;
     private ControlSphere positionOffsetProjectedScript;
     public GameObject offsetControllerAnchor;
@@ -79,6 +80,7 @@ public class TaskRunner : MonoBehaviour
     private float visualSpeedOffsetStartFraction;
     private float visualSpeedOffsetEndFraction;
     private float angleStartToControllerLastFrame;
+    private float angleOffset = 0f;
 
     // Materials
     public Material targetGreen;
@@ -128,7 +130,7 @@ public class TaskRunner : MonoBehaviour
     // Others
     public TextMeshPro trialCounter;
     public float trialSpaceRotationY = 0f;
-    public float angleMultiplier = 1f;
+    //public float angleMultiplier = 1f;
     private float radius;
     private float radiusSD;
     public float angleStartToController;
@@ -162,7 +164,7 @@ public class TaskRunner : MonoBehaviour
 
 
         //relating to rotating armrest
-        positionToOffsetFromScript = positionToOffsetFrom.GetComponent<ControlSphere>();
+        // positionToOffsetFromScript = positionToOffsetFrom.GetComponent<ControlSphere>();
         positionProjectedScript = positionProjected.GetComponent<ControlSphere>();
         positionOffsetProjectedScript = positionOffsetProjected.GetComponent<ControlSphere>();
         positionPacerScript = positionPacer.GetComponent<ControlSphere>();
@@ -318,7 +320,9 @@ public class TaskRunner : MonoBehaviour
             offsetControllerAnchor.SetActive(false);
 
             Debug.Log("nDims1 started");
-            Vector3 dirToStart = Quaternion.Euler(0, -43.0f, 0) * (
+            float randomRotationRange1d = trial.settings.GetFloat("randomRotationRange1d");
+            float randomRotationRange1dThisTrial = Random.Range(-randomRotationRange1d, randomRotationRange1d);
+            Vector3 dirToStart = Quaternion.Euler(0, -40.0f + randomRotationRange1dThisTrial, 0) * (
                 new Vector3(
                     leftHandAnchor.transform.position.x,
                     rightHandAnchor.transform.position.y,
@@ -327,21 +331,26 @@ public class TaskRunner : MonoBehaviour
             D1targetSpaceRotation.transform.rotation = Quaternion.LookRotation(dirToStart);
             A1d.transform.rotation = Quaternion.LookRotation(dirToStart);
             B1d.transform.rotation = Quaternion.LookRotation(dirToEnd);
+
+            positionToOffsetFrom.transform.position = A1dPos.transform.position;
+            // positionToOffsetFrom.transform.rotation = A1d.transform.rotation;
+
             A1dPosScript.Visible(true);
             B1dPosScript.Visible(true);
             A1dPosScript.ColorObj(startTeal);
             B1dPosScript.ColorObj(standbyGrey);
             bool readyButtonPressed = false;
             float timer = 0f;
+            float breakTimer = Random.Range(0.5f, 0.75f);
             Quaternion initiateRotation = A1d.transform.rotation;
             while(true)
             {
-                float angle = Mathf.Abs(CalculateAngleDirectional(positionProjected, A1dPos, rotatingArmSpace));
+                float angle = Mathf.Abs(CalcAngleDirectional(positionProjected, A1dPos, rotatingArmSpace));
                 if (Input.GetKeyDown(KeyCode.P))
                 {
                     break;
                 }
-                if (timer > 0.5f)
+                if (timer > breakTimer)
                 {
                     break;
                 }
@@ -396,9 +405,8 @@ public class TaskRunner : MonoBehaviour
                 yield return null;
                 
             }
-            positionToOffsetFrom.transform.position = rightHandAnchor.transform.position;
-            positionToOffsetFrom.transform.rotation = rightHandAnchor.transform.rotation;
-            angleMultiplier = trial.settings.GetFloat("angleMultiplier");
+            
+            //angleMultiplier = trial.settings.GetFloat("angleMultiplier");
             vibrationCR = StartCoroutine(Vibration(trial));
             
             A1dPosScript.Visible(false);
@@ -432,7 +440,7 @@ public class TaskRunner : MonoBehaviour
             trialTargetScript.ColorObj(standbyGrey);
             trialStartScript.ColorObj(startTeal);
             controllerSphereScript.ResetVisualOffset();
-
+            float breakTimer = Random.Range(0.5f, 0.75f);
             float timer = 0f;
             bool readyButtonPressed = false;
             Vector3 initiatePosition = new Vector3();
@@ -446,7 +454,7 @@ public class TaskRunner : MonoBehaviour
                 {
                     break;
                 }
-                if (timer > 0.5f)
+                if (timer > breakTimer)
                 {
                     break;
                 }
@@ -521,7 +529,7 @@ public class TaskRunner : MonoBehaviour
                 yield return new WaitUntil(() => (OVRInput.GetDown(OVRInput.Button.One)));
             }
 
-            if (trial.settings.GetInt("nTargets") > 1)
+            else if (trial.settings.GetInt("nTargets") > 1)
             {
                 controllerSphereScript.Visible(trial.settings.GetBool("controllerVisibleTrialStart"));
                 Vector3 lastInputPosition = trialStart.transform.position;
@@ -596,37 +604,47 @@ public class TaskRunner : MonoBehaviour
         if (nDims == 1 & calibrationArmrestComplete)
         {
 
-            angleStartToController = CalculateAngleDirectional(positionToOffsetFrom, rightHandAnchor, rotatingArm);
-            float angleChange = angleStartToController - angleStartToControllerLastFrame;
-            float movementFraction = (angleStartToController / Session.instance.CurrentTrial.settings.GetFloat("targetDegrees"));
-            if (movementFraction >= Session.instance.CurrentTrial.settings.GetFloat("visualSpeedOffsetStartFraction") &&
-                movementFraction <= Session.instance.CurrentTrial.settings.GetFloat("visualSpeedOffsetEndFraction"))
-            {
-                angleStartToOffsetController = angleStartToOffsetController + (angleChange * angleMultiplier);
-            }
-            else
-            {
-                angleStartToOffsetController = angleStartToOffsetController + (angleChange);
-            }
-
-            angleStartToPacer = CalculateAngleDirectional(positionToOffsetFrom, positionPacer, rotatingArm);
-
+            angleStartToController = CalcAngleDirectional(positionToOffsetFrom, rightHandAnchor, rotatingArm);
+            angleStartToOffsetController = CalcOffsetAngle(
+                angleStartToController,
+                Session.instance.CurrentTrial.settings.GetFloat("angleMultiplier"),
+                Session.instance.CurrentTrial.settings.GetFloat("visualSpeedOffsetStartFraction"),
+                Session.instance.CurrentTrial.settings.GetFloat("visualSpeedOffsetEndFraction"),
+                Session.instance.CurrentTrial.settings.GetFloat("targetDegrees")
+            );
+            // float angleChange = angleStartToController - angleStartToControllerLastFrame;
+            // float movementFraction = (angleStartToController / Session.instance.CurrentTrial.settings.GetFloat("targetDegrees"));
+            // if (movementFraction >= Session.instance.CurrentTrial.settings.GetFloat("visualSpeedOffsetStartFraction") &&
+            //     movementFraction <= Session.instance.CurrentTrial.settings.GetFloat("visualSpeedOffsetEndFraction"))
+            // {
+            //     angleOffset = angleOffset + (angleChange * Session.instance.CurrentTrial.settings.GetFloat("angleMultiplier"));
+            //     //angleStartToOffsetController = angleStartToOffsetController + (angleChange * angleMultiplier);
+            // }
+            // else
+            // {
+            //     angleOffset = angleOffset + angleChange;
+            //     //angleStartToOffsetController = angleStartToOffsetController + (angleChange);
+            // }
+            // angleStartToOffsetController = angleOffset;
+            angleStartToPacer = CalcAngleDirectional(positionToOffsetFrom, positionPacer, rotatingArm);
 
             Vector3 dirToController = rightHandAnchor.transform.position - rotatingArm.transform.position;
             Vector3 dirToStart = positionToOffsetFrom.transform.position - rotatingArm.transform.position;
             Vector3 dirToOffsetController = Quaternion.Euler(0, angleStartToOffsetController, 0) * dirToStart;
-            angleStartToControllerLastFrame = CalculateAngleDirectional(positionToOffsetFrom, rightHandAnchor, rotatingArm);
+            // Vector3 dirToOffsetController = Quaternion.Euler(0, angleOffset, 0) * dirToController;
             //rotatingArm.transform.forward = dirToStart;
 
             rotatingArm.transform.forward = dirToOffsetController;
             rotationProjected.transform.forward = dirToController;
+            // angleStartToOffsetController = CalcAngleDirectional(positionToOffsetFrom, positionOffsetProjected, rotatingArm);
+            // angleStartToControllerLastFrame = CalcAngleDirectional(positionToOffsetFrom, rightHandAnchor, rotatingArm);
         }
 
         // debug objs
         AudioLatencyTester.SetActive(debugAudio);
         VRConsole.SetActive(showConsole);
         debugSphereScript.Visible(showDebugSphere);
-        positionToOffsetFromScript.Visible(showDebugSpheresRotation);
+        // positionToOffsetFromScript.Visible(showDebugSpheresRotation);
         positionProjectedScript.Visible(showDebugSphere);
     }
     IEnumerator ConfirmQuitCR()
@@ -1023,6 +1041,8 @@ public class TaskRunner : MonoBehaviour
         float sumOfSquares = radii.Sum(radius => Mathf.Pow(radius - aveRadius, 2));
         radiusSD = Mathf.Sqrt(sumOfSquares / radii.Count);
 
+        Vector3 positionToOffsetFromPos = positionToOffsetFrom.transform.position;
+
         // Set center of rotating armrest
         rotatingArmSpace.transform.position = aveCenter;
         rotatingArmSpace.transform.eulerAngles = new Vector3(0, 0, 0);
@@ -1034,9 +1054,15 @@ public class TaskRunner : MonoBehaviour
         A1dPos.transform.localPosition = new Vector3(0, 0, radius);
         B1dPos.transform.localPosition = new Vector3(0, 0, radius);
 
-        positionToOffsetFrom.transform.position = new Vector3(positionToOffsetFrom.transform.position.x, rotatingArm.transform.position.y, positionToOffsetFrom.transform.position.z);
-        angleStartToController = CalculateAngleDirectional(positionToOffsetFrom, rightHandAnchor, rotatingArm);
-        angleStartToOffsetController = angleStartToController * angleMultiplier;
+        positionToOffsetFrom.transform.position = new Vector3(positionToOffsetFromPos.x, rotatingArm.transform.position.y, positionToOffsetFromPos.z);
+        angleStartToController = CalcAngleDirectional(positionToOffsetFrom, rightHandAnchor, rotatingArm);
+        // angleStartToOffsetController = angleStartToController * Session.instance.CurrentTrial.settings.GetFloat("angleMultiplier");
+        angleStartToOffsetController = CalcOffsetAngle(
+            angleStartToController,
+            Session.instance.CurrentTrial.settings.GetFloat("angleMultiplier"),
+            0f,
+            1f,
+            80f);
         Vector3 dirToController = rightHandAnchor.transform.position - rotatingArm.transform.position;
         Vector3 dirToStart = positionToOffsetFrom.transform.position - rotatingArm.transform.position;
         Vector3 dirToOffsetController = Quaternion.Euler(0, angleStartToOffsetController, 0) * dirToStart;
@@ -1060,7 +1086,7 @@ public class TaskRunner : MonoBehaviour
         // Debug.Log($"visual offset of {buttonAVisualOffset} applied");
         
     }
-    private float CalculateAngleDirectional(GameObject At, GameObject Bt, GameObject Ct)
+    private float CalcAngleDirectional(GameObject At, GameObject Bt, GameObject Ct)
     {
         Vector3 A = At.transform.position;
         Vector3 B = Bt.transform.position;
@@ -1078,6 +1104,25 @@ public class TaskRunner : MonoBehaviour
         float angle = Mathf.Atan2(det, dot) * Mathf.Rad2Deg*-1;
 
         return angle;
+    }
+    private float CalcOffsetAngle(float currentAngle, float multiplier, float startOffsetFraction, float  endOffsetFraction, float targetAngle)
+    {
+        float offsetAngle;
+        // float currentFraction = currentAngle / targetAngle;
+        float startOffsetAngle = targetAngle * startOffsetFraction;
+        float endOffsetAngle = targetAngle * endOffsetFraction;
+        if (currentAngle <= startOffsetAngle)
+        {
+            offsetAngle = currentAngle;
+        }
+        else if (currentAngle < startOffsetAngle | currentAngle <= endOffsetAngle)
+        {
+            offsetAngle = (startOffsetAngle) + ((currentAngle-startOffsetAngle) * multiplier);
+        }
+        else {
+            offsetAngle = (startOffsetAngle) + ((endOffsetAngle-startOffsetAngle) * multiplier) + ((currentAngle - endOffsetAngle));
+        }
+        return offsetAngle;
     }
     public class Easing
     {
