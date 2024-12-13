@@ -11,6 +11,9 @@ public class ExperimentConstructorScript : MonoBehaviour
         Debug.LogWarning("Experiment constructor started");
         List<int> runBlocks = uxfSession.settings.GetIntList("runBlocks");
         int numRepeats = uxfSession.settings.GetInt("numRepeats");
+        int numRepeatsPractice = uxfSession.settings.GetInt("numRepeatsPractice");
+        string practiceInstructions = $"\nYou will start with {numRepeatsPractice} practice trials before moving on the data collection.";
+        string realInstructions = $"\nActual data collection will now start.";
 
         blockNumber = 0;
         if (blockNumber == 0)
@@ -21,7 +24,7 @@ public class ExperimentConstructorScript : MonoBehaviour
             newTrial.settings.SetValue("calibration", true);
             block.settings.SetValue("blockInstructions", "Calibration");
         }
-
+        // 1D reaching tasks, rotating arm rest tasks
         if (uxfSession.settings.GetInt("nDims") == 1)
         {
             blockNumber = 1;
@@ -46,39 +49,104 @@ public class ExperimentConstructorScript : MonoBehaviour
             }
         }
 
-
+        // 2D reaching tasks
         else if (uxfSession.settings.GetInt("nDims") == 2)
         {
+            // Reaching tasks with visual rotation trial to trial, with visual feedback throughout movement
             blockNumber = 1;
             if (runBlocks.Contains(blockNumber))
             {
-                Block block = uxfSession.CreateBlock();
-                block.settings.SetValue("blockInstructions", "testing text");
-                for (int i = 0; i < numRepeats; i++)
+                Block practiceblock = uxfSession.CreateBlock();
+                for (int i = 0; i < numRepeatsPractice; i++)
                 {
-                    Trial newTrial = block.CreateTrial();
+                    Trial newTrial = practiceblock.CreateTrial();
                     newTrial.settings.SetValue("blockNumber", blockNumber);
                     newTrial.settings.SetValue("controllerVisibleTrialStart", true);
+                    // newTrial.settings.SetValue("visualXrotation", visualXrotation);
                 }
-                block.settings.SetValue("blockInstructions", (
-                    "Your task is to indicate target location. "+
-                    "Move controller within the start location (teal) "+
-                    "and press B button to indicate readiness. "+
-                    "Wait for target to turn green, to move to target and press A."
-                ));
-                block.trials.Shuffle();
-                Debug.Log("Block 1 Instructions: " + block.settings.GetString("blockInstructions"));
-            }
-
-            blockNumber = 2;
-            if (runBlocks.Contains(blockNumber))
-            {
                 Block block = uxfSession.CreateBlock();
+                foreach (float visualXrotation in uxfSession.settings.GetFloatList("visualXrotations"))
+                {
+                    for (int i = 0; i < numRepeats; i++)
+                    {
+                        Trial newTrial = block.CreateTrial();
+                        newTrial.settings.SetValue("blockNumber", blockNumber);
+                        newTrial.settings.SetValue("controllerVisibleTrialStart", true);
+                        newTrial.settings.SetValue("visualXrotation", visualXrotation);
+                    }
+                }
                 for (int i = 0; i < numRepeats; i++)
                 {
                     Trial newTrial = block.CreateTrial();
                     newTrial.settings.SetValue("blockNumber", blockNumber);
                     newTrial.settings.SetValue("controllerVisibleTrialStart", false);
+                }
+                string instructions = (
+                    "Your task is to indicate target location. "+
+                    "Move controller within the start location (teal) "+
+                    "and press B button to indicate readiness. "+
+                    "Wait for target to turn green, to move to target and press A."+
+                    "On some trials the controller sphere will be invisible."
+                );
+                practiceblock.settings.SetValue("blockInstructions", instructions + practiceInstructions);
+                block.settings.SetValue("blockInstructions", instructions + realInstructions);
+                block.trials.Shuffle();
+                Debug.Log("Block 1 Instructions: " + block.settings.GetString("blockInstructions"));
+            }
+            // Reaching tasks with visual rotation trial to trial, with brief visual feedback during movement
+            blockNumber = 2;
+            if (runBlocks.Contains(blockNumber))
+            {
+                Block practiceblock = uxfSession.CreateBlock();
+                for (int i = 0; i < numRepeatsPractice; i++)
+                {
+                    Trial newTrial = practiceblock.CreateTrial();
+                    newTrial.settings.SetValue("blockNumber", blockNumber);
+                    newTrial.settings.SetValue("controllerVisibleTrialStart", false);
+                    newTrial.settings.SetValue("turnControllerVisibleMidpoint", true);
+                    // newTrial.settings.SetValue("visualXrotation", visualXrotation);
+                }
+                Block block = uxfSession.CreateBlock();
+                foreach (float visualXrotation in uxfSession.settings.GetFloatList("visualXrotations"))
+                {
+                    for (int i = 0; i < numRepeats; i++)
+                    {
+                        Trial newTrial = block.CreateTrial();
+                        newTrial.settings.SetValue("blockNumber", blockNumber);
+                        newTrial.settings.SetValue("controllerVisibleTrialStart", false);
+                        newTrial.settings.SetValue("turnControllerVisibleMidpoint", true);
+                        newTrial.settings.SetValue("visualXrotation", visualXrotation);
+                    }
+                }
+                string instructions = (
+                    "Your task is to indicate target location. "+
+                    "Move controller within the start location (teal) "+
+                    "and press B button to indicate readiness. "+
+                    "Wait for target to turn green, to move to target and press A."+
+                    "The controller sphere will be mostly invisible, except for a brief glimpse during movement."
+                );
+                practiceblock.settings.SetValue("blockInstructions", instructions + practiceInstructions);
+                block.settings.SetValue("blockInstructions", instructions + realInstructions);
+                block.trials.Shuffle();
+                Debug.Log("Block 1 Instructions: " + block.settings.GetString("blockInstructions"));
+            }
+
+            // Reaching task without visual feedback and with vibration
+            blockNumber = 3;
+            if (runBlocks.Contains(blockNumber))
+            {
+                Block block = uxfSession.CreateBlock();
+                foreach (string vibration in uxfSession.settings.GetStringList("vibrationTypes"))
+                {
+                    for (int i = 0; i < numRepeats; i++)
+                    {
+                        Trial newTrial = block.CreateTrial();
+                        newTrial.settings.SetValue("blockNumber", blockNumber);
+                        newTrial.settings.SetValue("controllerVisibleTrialStart", false);
+                        newTrial.settings.SetValue("vibration", vibration);
+                        newTrial.settings.SetValue("vibrationStartFraction", 0f);
+                        newTrial.settings.SetValue("vibrationEndFraction", 1f);
+                    }
                 }
                 block.settings.SetValue("blockInstructions", (
                     "Your task is to indicate target location. "+
@@ -90,7 +158,7 @@ public class ExperimentConstructorScript : MonoBehaviour
                 block.trials.Shuffle();
             }
 
-            blockNumber = 3;
+            blockNumber = 4;
             if (runBlocks.Contains(blockNumber))
             {
                 Block block = uxfSession.CreateBlock();
@@ -120,7 +188,7 @@ public class ExperimentConstructorScript : MonoBehaviour
                 block.trials.Shuffle();
             }
 
-            blockNumber = 4;
+            blockNumber = 5;
             if (runBlocks.Contains(blockNumber))
             {
                 Block block = uxfSession.CreateBlock();

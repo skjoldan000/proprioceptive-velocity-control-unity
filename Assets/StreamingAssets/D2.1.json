@@ -1,11 +1,16 @@
 {
-    "runBlocks": [1,2,3],
-    "numRepeats": 10,
     "nDims": 2,
+    "runBlocks": [1,2,3],
+    "numRepeats": 5,
+    "numRepeatsPractice": 2,
     "nTargets": 1,
     "nTargetsb4": 17,
-    "vibration" :"both",
-    "vibrationTypes": ["none", "both","left", "right"], 
+    "vibration" :"none",
+    "vibrationTypes": ["none", "biceps", "triceps"], 
+    "vibrationStartFraction": 0.33,
+    "vibrationEndFraction": 0.66,
+    "targetDistance": 0.45,
+    "practise" : false,
     "calibration": false, 
     "controllerVisibleTrialStart": true,
     "turnControllerVisibleMidpoint": false,
@@ -15,9 +20,11 @@
     "visualZOffset": 0,
     "visualXOffsets": [-0.025, 0, 0.025],
     "visualZOffsets": [-0.025, 0, 0.025],
+    "visualXrotation": 0,
+    "visualXrotations": [-10, 0, 10],
     "trialOrientation": "forwardBack",
     "applyRandomRotation": true,
-    "randomRotationRange": [-10, 10], 
+    "randomRotationRange": 10, 
 
     "blockInstructions": "Instructions not set"
 }

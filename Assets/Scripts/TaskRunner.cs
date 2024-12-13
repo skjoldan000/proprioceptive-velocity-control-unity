@@ -257,11 +257,20 @@ public class TaskRunner : MonoBehaviour
 
             trialSpace.transform.position = trialSpaceSetup.transform.position;
             trialSpace.transform.rotation = trialSpaceSetup.transform.rotation;
+            trialSpaceRotatedMovementSpace.transform.position = trialSpaceSetup.transform.position;
+            trialSpaceRotatedMovementSpace.transform.rotation = trialSpaceSetup.transform.rotation;
+
+            trialTarget.transform.localPosition = new Vector3(
+                trialTarget.transform.localPosition.x,
+                trialTarget.transform.localPosition.y,
+                trial.settings.GetFloat("targetDistance")
+            );
+            
 
             if (trial.settings.GetBool("applyRandomRotation"))
             {
-                List<float> randomRotationRange = trial.settings.GetFloatList("randomRotationRange");
-                trialSpaceRotationY = Random.Range(randomRotationRange[0], randomRotationRange[1]);
+                float randomRotationRange = trial.settings.GetFloat("randomRotationRange");
+                trialSpaceRotationY = Random.Range(-randomRotationRange, randomRotationRange);
                 trialSpace.transform.Rotate(0f, trialSpaceRotationY, 0f);
             }
         }
@@ -502,13 +511,13 @@ public class TaskRunner : MonoBehaviour
                     }                }
                 yield return null;
             }
-            StartCoroutine(Vibration(trial));
 
             trialProgress = "trialStarted";
             trialStartedTime = Time.time;
 
             if (trial.settings.GetInt("nTargets") == 1)
             {
+                StartCoroutine(Vibration(trial));
                 trialStartScript.Visible(false);
                 controllerSphereScript.Visible(trial.settings.GetBool("controllerVisibleTrialStart"));
 
@@ -518,6 +527,11 @@ public class TaskRunner : MonoBehaviour
                     0, 
                     trial.settings.GetFloat("visualZOffset")),
                     trialSpace.transform);
+
+                trialSpaceRotatedMovementSpace.transform.Rotate(
+                    0f,
+                    trial.settings.GetFloat("visualXrotation"),
+                    0f);
                 trialTargetScript.ColorObj(targetGreen);
                 // Trial is now initiated
                 // Controller visibility
@@ -527,6 +541,7 @@ public class TaskRunner : MonoBehaviour
                 // Ensure input button is not fat fingered immediately before input is allowed
                 yield return new WaitUntil(() => (Vector3.Distance(trialStart.transform.position, controllerSphere.transform.position) > 0.1f));
                 yield return new WaitUntil(() => (OVRInput.GetDown(OVRInput.Button.One)));
+                trialEndButtonPressed = true;
             }
 
             else if (trial.settings.GetInt("nTargets") > 1)
@@ -742,18 +757,27 @@ public class TaskRunner : MonoBehaviour
     IEnumerator Vibration(Trial trial)
     {
         string vibration = trial.settings.GetString("vibration");
-        if (trial.settings.GetFloat("vibrationStartFraction") > 0f){
-            yield return new WaitUntil(() => (Mathf.Abs(angleStartToController)/Mathf.Abs(trial.settings.GetFloat("targetDegrees")) >= trial.settings.GetFloat("vibrationStartFraction")));
-            Debug.Log($"delayed vibration started, fraction: {Mathf.Abs(angleStartToController)/Mathf.Abs(trial.settings.GetFloat("targetDegrees"))}");
+        int nDims = trial.settings.GetInt("nDims");
+        if (trial.settings.GetFloat("vibrationStartFraction") > 0f)
+        {
+            if (nDims == 1)
+            {
+                yield return new WaitUntil(() => (Mathf.Abs(angleStartToController)/Mathf.Abs(trial.settings.GetFloat("targetDegrees")) >= trial.settings.GetFloat("vibrationStartFraction")));
+                Debug.Log($"delayed vibration started, fraction: {Mathf.Abs(angleStartToController)/Mathf.Abs(trial.settings.GetFloat("targetDegrees"))}");
+            }
+            else if (nDims == 2)
+            {
+                yield return new WaitUntil(() => ((controllerSphere.transform.localPosition.z / trialTarget.transform.localPosition.z) >= trial.settings.GetFloat("vibrationStartFraction")));
+            }
         }
         int frameCounter = 0;
         trialVibStart = Time.time + FrameTimer.FrameStopwatch.Elapsed.TotalMilliseconds/1000.0;
         arduinoReciever.SendTrigger("true");
-        if (vibration == "left")
+        if (vibration == "biceps")
         {
             vibLeft.Play();
         }
-        else if (vibration == "right")
+        else if (vibration == "triceps")
         {
             vibRight.Play();
         }
@@ -771,12 +795,20 @@ public class TaskRunner : MonoBehaviour
         Debug.Log($"Vibration {vibration} started");
         if (trial.settings.GetFloat("vibrationEndFraction") < 1f)
         {
-            yield return new WaitUntil(() => (Mathf.Abs(angleStartToController)/Mathf.Abs(trial.settings.GetFloat("targetDegrees")) >= trial.settings.GetFloat("vibrationEndFraction")));
-            Debug.Log($"early vibration stop {Mathf.Abs(angleStartToController)/Mathf.Abs(trial.settings.GetFloat("targetDegrees"))}");
+            if (nDims == 1)
+            {
+                yield return new WaitUntil(() => ((Mathf.Abs(angleStartToController)/Mathf.Abs(trial.settings.GetFloat("targetDegrees")) >= trial.settings.GetFloat("vibrationEndFraction") | trialEndButtonPressed)));
+                Debug.Log($"early vibration stop {Mathf.Abs(angleStartToController)/Mathf.Abs(trial.settings.GetFloat("targetDegrees"))}");
+            }
+            else if (nDims == 2)
+            {
+                yield return new WaitUntil(() => (((controllerSphere.transform.localPosition.z / trialTarget.transform.localPosition.z) >= trial.settings.GetFloat("vibrationEndFraction") | trialEndButtonPressed)));
+            }
         }
         else{
             yield return new WaitUntil(() => (trialEndButtonPressed));
         }
+
         trialVibStop = Time.time + FrameTimer.FrameStopwatch.Elapsed.TotalMilliseconds/1000.0;
         arduinoReciever.SendTrigger("false");
         vibLeft.Stop();

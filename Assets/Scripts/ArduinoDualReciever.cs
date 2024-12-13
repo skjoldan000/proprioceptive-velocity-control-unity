@@ -202,7 +202,7 @@ public class ArduinoDualReciever : MonoBehaviour {
         {
             if (saving)
             {
-                Debug.LogError("Error parsing MPU data: " + ex.Message);
+                Debug.LogError($"Error parsing MPU data: {ex.Message}, data: {data}");
             }
         }
     }
@@ -242,7 +242,7 @@ public class ArduinoDualReciever : MonoBehaviour {
         {
             if (saving)
             {
-                Debug.LogError("Error parsing MPU data: " + ex.Message);
+                Debug.LogError($"Error parsing MPU data: {ex.Message}, data: {data}");
             }
         }
     }
