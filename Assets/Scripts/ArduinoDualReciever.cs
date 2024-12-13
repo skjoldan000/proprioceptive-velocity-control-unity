@@ -51,7 +51,7 @@ public class ArduinoDualReciever : MonoBehaviour {
 
         
         // Initialize Serial Ports
-        InitSerialPort(ref mpuSerialPort, mpuCOMPort, ref mpuSerialThread, ReadMPUSerialData);
+        // InitSerialPort(ref mpuSerialPort, mpuCOMPort, ref mpuSerialThread, ReadMPUSerialData);
         InitSerialPort(ref audioSerialPort, audioCOMPort, ref audioSerialThread, ReadAudioSerialData);
     }
     
@@ -105,7 +105,7 @@ public class ArduinoDualReciever : MonoBehaviour {
         {
             if (saving)
             {
-                ProcessQueueData(mpuSerialQueue, linesToProcess, ParseAndProcessMPUData);
+                // ProcessQueueData(mpuSerialQueue, linesToProcess, ParseAndProcessMPUData);
                 ProcessQueueData(audioSerialQueue, linesToProcess, ParseAndProcessAudioData);
             }
         }
@@ -126,9 +126,9 @@ public class ArduinoDualReciever : MonoBehaviour {
     {
         if (isRunning)
         {
-            var mpuHeaders = new string[]{ "time", "frameOffset", "zeroedTime", "ax", "ay", "az", "vibrationOn", "arduinoRecievedTime", "micros" };
-            currentMPUTrialDataTable = new UXFDataTable(mpuHeaders);
-            Debug.Log($"MPU Initialized data table for trial {trial.number}");
+            // var mpuHeaders = new string[]{ "time", "frameOffset", "zeroedTime", "ax", "ay", "az", "vibrationOn", "arduinoRecievedTime", "micros" };
+            // currentMPUTrialDataTable = new UXFDataTable(mpuHeaders);
+            // Debug.Log($"MPU Initialized data table for trial {trial.number}");
 
             var audioHeaders = new string[]{ "time", "frameOffset", "zeroedTime", "signalAmplitude", "vibrationOn", "arduinoRecievedTime", "micros" };
             currentAudioTrialDataTable = new UXFDataTable(audioHeaders);
@@ -251,8 +251,8 @@ public class ArduinoDualReciever : MonoBehaviour {
     {
         try
         {
-            trial.SaveDataTable(currentMPUTrialDataTable, "mpu_data");
-            Debug.Log($"MPU Data saved for trial {trial.number}");
+            // trial.SaveDataTable(currentMPUTrialDataTable, "mpu_data");
+            // Debug.Log($"MPU Data saved for trial {trial.number}");
 
             trial.SaveDataTable(currentAudioTrialDataTable, "audio_data");
             Debug.Log($"Audio Data saved for trial {trial.number}");
@@ -266,9 +266,9 @@ public class ArduinoDualReciever : MonoBehaviour {
     void OnApplicationQuit() {
         // Stop threads and close serial ports
         isRunning = false;
-        StopThread(ref mpuSerialThread);
+        // StopThread(ref mpuSerialThread);
         StopThread(ref audioSerialThread);
-        CloseSerialPort(ref mpuSerialPort);
+        // CloseSerialPort(ref mpuSerialPort);
         CloseSerialPort(ref audioSerialPort);
         Debug.Log("Serial ports closed and threads stopped.");
     }
@@ -291,7 +291,7 @@ public class ArduinoDualReciever : MonoBehaviour {
     {
         if (isRunning)
         {
-            mpuSerialQueue = new ConcurrentQueue<string>();
+            // mpuSerialQueue = new ConcurrentQueue<string>();
             audioSerialQueue = new ConcurrentQueue<string>();
             Debug.Log("Serial queues reinitialized.");
         }
@@ -305,7 +305,7 @@ public class ArduinoDualReciever : MonoBehaviour {
             {
                 if (value == "true" | value == "false" | value == "zerotimer") {
                     string message = $"{value}\n"; // Append newline character for Arduino's readStringUntil
-                    mpuSerialPort.WriteLine(message);
+                    // mpuSerialPort.WriteLine(message);
                     audioSerialPort.WriteLine(message);
                 }
                 else {
