@@ -25,7 +25,7 @@ public class AudioLatencyTester : MonoBehaviour
     public Material targetGreen;
     public Material standbyGrey;
     public GameObject backGround;
-    public ArduinoDualReciever arduinoReciever;
+    public ArduinoDualReceiver arduinoReciever;
     public TaskRunner taskRunner;
     private Coroutine VibrationCR;
     public double frameStartToAudioStartPre;
@@ -127,6 +127,6 @@ public class AudioLatencyTester : MonoBehaviour
         sphereScript.ColorObj(standbyGrey);
         backGround.GetComponent<Renderer>().material = standbyGrey;
         vibrationCRComplete = true;
-        Debug.Log($"timing of 30 frames: {vibstop - vibstart}");
+        Debug.Log($"timing of 30 frames: {trialVibStop - trialVibStart}");
     }
 }

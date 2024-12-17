@@ -755,6 +755,26 @@ dat %>%
 ```
 
 
+```{r}
+full_path <- "C:/Users/erik-/Desktop/proprioceptive-velocity-control-unity/testData/"
+file <- "singletest2"
+sub_path <- list.files(full_path, recursive = TRUE) %>% 
+  str_subset("trial_results") %>% 
+  str_subset(file)
+
+path <- paste0(full_path, sub_path)
+
+df <- read_csv(path)
+
+# ard <- read_csv(paste0(full_path, df %>% filter(trial_num == 1) %>% pull(mpu_data_location_0)))
+aud <- read_csv(paste0(full_path, df %>% filter(trial_num == 1) %>% pull(audio_data_location_0)))
+track <- read_csv(paste0(full_path, df %>% filter(trial_num == 1) %>% pull(tracker2d_movement_location_0)))
+
+# ard <- ard %>% left_join(track %>% select(time, trialID, vibLeft, targetNumber, frameStartToAudioStartPre, frameStartToAudioStopPre), by = c("time")) %>% mutate(signal = az, type = "acc")
+dat <- aud %>% left_join(track %>% select(time, trialID, vibLeft, targetNumber, frameStartToAudioStartPre, frameStartToAudioStopPre), by = c("time")) %>% mutate(signal = signalAmplitude, type = "aud")
+
+# dat <- bind_rows(ard, aud)
+```
 
 
 

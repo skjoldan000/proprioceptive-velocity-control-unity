@@ -21,17 +21,22 @@ path <- "../../testData/"
 
 all_files <- list.files(path, recursive = TRUE)
 # all_files <- all_files %>% str_subset("erik3|erik4|erik5")
-all_files <- all_files %>% str_subset("erik6")
+# all_files <- all_files %>% str_subset("erik6")
 # all_files <- all_files %>% str_subset("maud1")
 # all_files <- all_files %>% str_subset("mark1")
 # all_files <- all_files %>% str_subset("mark1|maud1")
+# all_files <- all_files %>% str_subset("sim1")
+# all_files <- all_files %>% str_subset("sim3")
+# all_files <- all_files %>% str_subset("D1.1/mark1")
+all_files <- all_files %>% str_subset("D1.1/erik3")
+# all_files <- all_files %>% str_subset("D2.1/mark1")
 
 trials <- read_csv(paste0(path, all_files %>% str_subset("trial_results.csv"))) %>%
   filter(calibration == FALSE)
 
-tracking <- read_csv(paste0(path, trials %>% pull(tracker2d_movement_location_0))) %>% 
-  select(-c(truepos.y, vispos.y)) %>% 
-  filter(!trialProgress %in% c("trialSetup", "trialInput")) %>% 
+tracking <- read_csv(paste0(path, trials %>% pull(tracker1d_movement_location_0))) %>% 
+  # select(-c(truepos.y, vispos.y)) %>% 
+  # filter(!trialProgress %in% c("trialSetup")) %>% 
   left_join(trials, by = "trialID")
 
 targetOut <- geom_circle(aes(x0 = 0, y0 = 0.4, r = 0.025), color = NA, fill = "lightgreen", alpha = .125)
@@ -39,17 +44,36 @@ targetHome <- geom_circle(aes(x0 = 0, y0 = 0, r = 0.025), color = NA, fill = "li
 ```
 ```{r}
 plot_endpoints <- trials %>% 
-  filter(blockNumber %in% c(1,2)) %>% 
-  ggplot(aes(x = trueInput.x, y = trueInput.z, color = factor(blockNumber)))+
+  filter(blockNumber %in% c(1)) %>% 
+  ggplot(aes(x = trueInput.x, y = trueInput.z, color = interaction(visualXrotation, controllerVisibleTrialStart)))+
   # targetHome + 
   targetOut + 
   geom_point(size = 3) + 
   stat_ellipse(size = 2) +
-  stat_summary(aes(x = trueInput.x, y = trueInput.z, color = factor(blockNumber)), 
+  stat_summary(aes(x = trueInput.x, y = trueInput.z, color = interaction(visualXrotation, controllerVisibleTrialStart)), 
                fun = mean, geom = "point", size = 5, shape = 17) + 
   coord_fixed(ratio = 1)
 
 plot_endpoints
+
+plot_endpoints <- trials %>% 
+  filter(blockNumber %in% c(2)) %>% 
+  ggplot(aes(x = trueInput.x, y = trueInput.z, color = interaction(visualXrotation, controllerVisibleTrialStart)))+
+  # targetHome + 
+  targetOut + 
+  geom_point(size = 3) + 
+  stat_ellipse(size = 2) +
+  stat_summary(aes(x = trueInput.x, y = trueInput.z, color = interaction(visualXrotation, controllerVisibleTrialStart)), 
+               fun = mean, geom = "point", size = 5, shape = 17) + 
+  coord_fixed(ratio = 1)
+
+plot_endpoints
+
+tracking %>% 
+  filter(blockNumber %in% c(1)) %>% 
+  filter(practice == FALSE & calibration == FALSE)
+  
+
 
 
 ```
@@ -60,8 +84,7 @@ blockNumber 3
 ```{r}
 plot_endpoints1 <- trials %>% 
   filter(blockNumber == 3) %>% 
-  filter(visualZOffset == 0) %>% 
-  ggplot(aes(x = trueInput.x, y = trueInput.z, color = factor(visualXOffset))) +
+  ggplot(aes(x = trueInput.x, y = trueInput.z, color = factor(vibration))) +
   targetOut + 
   geom_point(size = 3) + 
   stat_ellipse(level = 0.95, size = 2) +
@@ -73,8 +96,7 @@ plot_endpoints1 %>%
 
 plot_endpoints2 <- trials %>%
   filter(blockNumber == 3) %>%
-  filter(visualXOffset == 0) %>%
-  ggplot(aes(x = trueInput.x, y = trueInput.z, color = factor(visualZOffset))) +
+  ggplot(aes(x = trueInput.x, y = trueInput.z, color = factor(vibration))) +
   targetOut +
   geom_point(size = 3) +
   stat_ellipse(level = 0.95, size = 2) +
@@ -84,30 +106,6 @@ plot_endpoints2 %>%
   ggMarginal(groupColour = TRUE, groupFill = TRUE)
 
 
-
-plot_endpoints2 <- trials %>%
-  filter(blockNumber == 3) %>%
-  ggplot(aes(x = trueInput.x, y = trueInput.z, color = factor(visualZOffset))) +
-  # targetHome +
-  targetOut +
-  geom_point(aes(shape = factor(visualXOffset)), size = 3) +
-  stat_ellipse(level = 0.95, size = 2) +
-  coord_fixed(ratio = 1)+ theme(legend.position = "bottom")
-
-plot_endpoints2 %>%
-  ggMarginal(groupColour = TRUE, groupFill = TRUE)
-
-plot_endpoints2 <- trials %>%
-  filter(blockNumber == 3) %>%
-  ggplot(aes(x = trueInput.x, y = trueInput.z, color = factor(visualXOffset))) +
-  # targetHome +
-  targetOut +
-  geom_point(aes(shape = factor(visualZOffset)), size = 3) +
-  stat_ellipse(level = 0.95, size = 2) +
-  coord_fixed(ratio = 1)+ theme(legend.position = "bottom")
-
-plot_endpoints2 %>%
-  ggMarginal(groupColour = TRUE, groupFill = TRUE)
 
 
 ```
@@ -158,7 +156,7 @@ plot_b4_endpoint_dens
 
 ```{r}
 plot_b4_path <- tracking %>% 
-  filter(blockNumber == 4) %>% 
+  filter(blockNumber == 1) %>% 
   ggplot(aes(x = truepos.x, y = truepos.z, group = trialID)) +
   targetHome + 
   targetOut + 
@@ -170,6 +168,72 @@ plot_b4_path <- tracking %>%
 plot_b4_path
 ```
 
+```{r}
+tracking %>% 
+  filter(block_num == 3) %>% 
+  filter(aButtonDown == TRUE) %>% 
+  ggplot(aes(x = angleStartToController, y = vibration))+
+  geom_boxplot()
+
+tracking %>%
+  group_by(trialID) %>% 
+  mutate(endtime = time[aButtonDown == TRUE]) %>% 
+  filter(time <= endtime) %>% 
+  filter(block_num == 2) %>% 
+  ggplot(aes(x = angleStartToPacer, y = angleStartToController, group = trialID, color = vibration))+
+  geom_path()+
+  geom_abline(intercept = 0, slope = 1, color = "black", linetype = "dashed")+
+  geom_vline(xintercept = - 20 + 6.5, color = "black", linetype = "dashed")+
+  geom_vline(xintercept = 80, color = "black", linetype = "dashed")+
+  geom_hline(yintercept = 80, color = "black", linetype = "dashed")+
+  facet_wrap(~vibration)
+
+tracking %>%
+  group_by(trialID) %>% 
+  mutate(endtime = time[aButtonDown == TRUE]) %>% 
+  filter(time <= endtime) %>% 
+  filter(block_num == 3) %>% 
+  ggplot(aes(x = angleStartToPacer, y = angleStartToController, group = trialID, color = vibration))+
+  geom_path()+
+  geom_abline(intercept = 0, slope = 1, color = "black", linetype = "dashed")+
+  geom_vline(xintercept = - 40 + 6.5, color = "black", linetype = "dashed")+
+  geom_vline(xintercept = 80, color = "black", linetype = "dashed")+
+  geom_hline(yintercept = 80, color = "black", linetype = "dashed")+
+  facet_grid(
+    cols = vars(vibration),
+    rows = vars(vibrationStartFraction))
+
+
+tracking %>%
+  group_by(trialID) %>% 
+  mutate(endtime = time[aButtonDown == TRUE]) %>% 
+  filter(time <= endtime) %>% 
+  filter(block_num == 3) %>% 
+  ggplot(aes(x = angleStartToPacer, y = angleStartToController, group = trialID, color = vibration))+
+  geom_path()+
+  geom_abline(intercept = 0, slope = 1, color = "black", linetype = "dashed")+
+  geom_vline(xintercept = - 40 + 6.5, color = "black", linetype = "dashed")+
+  geom_vline(xintercept = 80, color = "black", linetype = "dashed")+
+  geom_hline(yintercept = 80, color = "black", linetype = "dashed")+
+  facet_grid(
+    cols = vars(vibration),
+    rows = vars(vibrationStartFraction))  
+  
+tracking %>%
+  group_by(trialID) %>% 
+  mutate(endtime = time[aButtonDown == TRUE]) %>% 
+  filter(time <= endtime) %>% 
+  filter(block_num == 3) %>% 
+  ggplot(aes(x = angleStartToPacer, y = angleStartToController, group = trialID, color = vibration))+
+  geom_path()+
+  geom_abline(intercept = 0, slope = 1, color = "black", linetype = "dashed")+
+  geom_vline(xintercept = - 40 + 6.5, color = "black", linetype = "dashed")+
+  geom_vline(xintercept = 80, color = "black", linetype = "dashed")+
+  geom_hline(yintercept = 80, color = "black", linetype = "dashed")+
+  facet_grid(
+    rows = vars(vibrationStartFraction))   
+
+```
 
 
 

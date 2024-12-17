@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -108,6 +109,7 @@ public class TaskRunner : MonoBehaviour
     private Coroutine currentTrialCR;
     private Coroutine calibrationCR;
     private Coroutine vibrationCR;
+    private Coroutine rotatePacerCR;
     private Coroutine ControllerVisibilityCR;
 
     // Timers
@@ -139,7 +141,7 @@ public class TaskRunner : MonoBehaviour
     private List<Vector3> pointsForCalibration;
     private int nDims;
     //public ArduinoReciever arduinoReciever;
-    public ArduinoDualReciever arduinoReciever;
+    public ArduinoDualReceiver arduinoReciever;
 
     // Results to save
     private Vector3 startPos;
@@ -228,52 +230,6 @@ public class TaskRunner : MonoBehaviour
         nDims = trial.settings.GetInt("nDims");
         debugSphereScript.Visible(showDebugSphere);
 
-
-
-        if (trial.settings.GetInt("nDims") == 1)
-        {
-            tracker1d.SetActive(true);
-        }
-        if (trial.settings.GetInt("nDims") == 2)
-        {
-            tracker2d.SetActive(true);
-            // reset trialspace (2d)
-            if (trial.settings.GetString("trialOrientation") == "lateral")
-            {
-                trialSpaceSetup.transform.position = trialSpaceSetupLateral.transform.position;
-                trialSpaceSetup.transform.rotation = trialSpaceSetupLateral.transform.rotation;
-            }
-            else if (trial.settings.GetString("trialOrientation") == "forwardBack")
-            {
-                trialSpaceSetup.transform.position = trialSpaceSetupForwardBack.transform.position;
-                trialSpaceSetup.transform.rotation = trialSpaceSetupForwardBack.transform.rotation;
-            }
-            else
-            {
-                Debug.LogError("trialOrientation must be either 'lateral' or 'forwardBack'");
-                trial.End();
-                Session.instance.End();
-            }
-
-            trialSpace.transform.position = trialSpaceSetup.transform.position;
-            trialSpace.transform.rotation = trialSpaceSetup.transform.rotation;
-            trialSpaceRotatedMovementSpace.transform.position = trialSpaceSetup.transform.position;
-            trialSpaceRotatedMovementSpace.transform.rotation = trialSpaceSetup.transform.rotation;
-
-            trialTarget.transform.localPosition = new Vector3(
-                trialTarget.transform.localPosition.x,
-                trialTarget.transform.localPosition.y,
-                trial.settings.GetFloat("targetDistance")
-            );
-            
-
-            if (trial.settings.GetBool("applyRandomRotation"))
-            {
-                float randomRotationRange = trial.settings.GetFloat("randomRotationRange");
-                trialSpaceRotationY = Random.Range(-randomRotationRange, randomRotationRange);
-                trialSpace.transform.Rotate(0f, trialSpaceRotationY, 0f);
-            }
-        }
         trialID = $"{Session.instance.ppid}_{Session.instance.experimentName}_{Session.instance.number}_{Session.instance.currentBlockNum}_{Session.instance.currentTrialNum}";
 
         // calibration
@@ -320,6 +276,10 @@ public class TaskRunner : MonoBehaviour
 
         if (nDims == 1)
         {
+            tracker1d.SetActive(true);
+
+            Debug.Log("nDims1 started");
+            // yield return new WaitUntil(() => Mathf.Abs(CalcAngleDirectional(positionProjected, A1dPos, rotatingArmSpace)) < 15);
             visualSpeedOffsetStartFraction = trial.settings.GetFloat("visualSpeedOffsetStartFraction");
             visualSpeedOffsetEndFraction = trial.settings.GetFloat("visualSpeedOffsetEndFraction");
 
@@ -327,10 +287,8 @@ public class TaskRunner : MonoBehaviour
             positionOffsetProjectedScript.Visible(true);
             rotatingArmObj.SetActive(false);
             offsetControllerAnchor.SetActive(false);
-
-            Debug.Log("nDims1 started");
             float randomRotationRange1d = trial.settings.GetFloat("randomRotationRange1d");
-            float randomRotationRange1dThisTrial = Random.Range(-randomRotationRange1d, randomRotationRange1d);
+            float randomRotationRange1dThisTrial = UnityEngine.Random.Range(-randomRotationRange1d, randomRotationRange1d);
             Vector3 dirToStart = Quaternion.Euler(0, -40.0f + randomRotationRange1dThisTrial, 0) * (
                 new Vector3(
                     leftHandAnchor.transform.position.x,
@@ -341,6 +299,7 @@ public class TaskRunner : MonoBehaviour
             A1d.transform.rotation = Quaternion.LookRotation(dirToStart);
             B1d.transform.rotation = Quaternion.LookRotation(dirToEnd);
 
+
             positionToOffsetFrom.transform.position = A1dPos.transform.position;
             // positionToOffsetFrom.transform.rotation = A1d.transform.rotation;
 
@@ -350,7 +309,7 @@ public class TaskRunner : MonoBehaviour
             B1dPosScript.ColorObj(standbyGrey);
             bool readyButtonPressed = false;
             float timer = 0f;
-            float breakTimer = Random.Range(0.5f, 0.75f);
+            float breakTimer = UnityEngine.Random.Range(0.5f, 0.75f);
             Quaternion initiateRotation = A1d.transform.rotation;
             while(true)
             {
@@ -412,44 +371,94 @@ public class TaskRunner : MonoBehaviour
                     }
                 }
                 yield return null;
-                
             }
-            
+            trialProgress = "trialStarted";
+            trialStartedTime = Time.time;
+            positionOffsetProjectedScript.Visible(trial.settings.GetBool("controllerVisibleTrialStart"));
             //angleMultiplier = trial.settings.GetFloat("angleMultiplier");
             vibrationCR = StartCoroutine(Vibration(trial));
+            Debug.Log($"vibration set to {trial.settings.GetString("vibration")}");
             
             A1dPosScript.Visible(false);
             B1dPosScript.ColorObj(targetGreen);
             Debug.Log($"Trial 1d started");
 
-            float duration = 2.5f;
-            float extraDegs = -20f;
             if (trial.settings.GetBool("rotationPacer"))
             {
-                Vector3 dirToPacerStart = rotatingArmSpace.transform.position + Quaternion.Euler(0, extraDegs, 0) * (A1dPos.transform.position - rotatingArmSpace.transform.position);
-                StartCoroutine(RotatePacer(
+                float priorDegs = 40f;
+                float extraDegs = 20f;
+                float duration = 2.4f;
+                float totalDur = duration * (Mathf.Abs(priorDegs) + (Mathf.Abs(extraDegs)) + Mathf.Abs(trial.settings.GetInt("targetDegrees"))) / trial.settings.GetInt("targetDegrees");
+                Vector3 dirToPacerStart = rotatingArmSpace.transform.position + Quaternion.Euler(0, -priorDegs, 0) * (A1dPos.transform.position - rotatingArmSpace.transform.position);
+                Vector3 dirToPacerEnd = rotatingArmSpace.transform.position + Quaternion.Euler(0, extraDegs, 0) * (B1dPos.transform.position - rotatingArmSpace.transform.position);
+                rotatePacerCR = StartCoroutine(RotatePacer(
                     dirToPacerStart, 
-                    B1dPos.transform.position, 
-                    duration * (Mathf.Abs(extraDegs) + Mathf.Abs(trial.settings.GetInt("targetDegrees"))) / trial.settings.GetInt("targetDegrees")));
-                Debug.Log($"total pacer duration set to {duration * (extraDegs + trial.settings.GetInt("targetDegrees")) / trial.settings.GetInt("targetDegrees")}");
+                    dirToPacerEnd, 
+                    totalDur)
+                    );
             }
-            yield return new WaitUntil(() => (angleStartToController > 10));
+            yield return new WaitUntil(() => (angleStartToController > 10f));
             yield return new WaitUntil(() => (OVRInput.GetDown(OVRInput.Button.One)));
+            arduinoReciever.saving = false;
             trialEndButtonPressed = true;
-            StopCoroutine(vibrationCR);
+            trialProgress = "trialInput";
+            trialInputTime = Time.time;
+
+            B1dPosScript.ColorObj(standbyGrey);
+            A1dPosScript.ColorObj(startTeal);
+            yield return new WaitUntil(() => (angleStartToController < 10f));
+
         }
         else if (nDims == 2)
         {
+            tracker2d.SetActive(true);
+            // reset trialspace (2d)
+            if (trial.settings.GetString("trialOrientation") == "lateral")
+            {
+                trialSpaceSetup.transform.position = trialSpaceSetupLateral.transform.position;
+                trialSpaceSetup.transform.rotation = trialSpaceSetupLateral.transform.rotation;
+            }
+            else if (trial.settings.GetString("trialOrientation") == "forwardBack")
+            {
+                trialSpaceSetup.transform.position = trialSpaceSetupForwardBack.transform.position;
+                trialSpaceSetup.transform.rotation = trialSpaceSetupForwardBack.transform.rotation;
+            }
+            else
+            {
+                Debug.LogError("trialOrientation must be either 'lateral' or 'forwardBack'");
+                trial.End();
+                Session.instance.End();
+            }
+
+            trialSpace.transform.position = trialSpaceSetup.transform.position;
+            trialSpace.transform.rotation = trialSpaceSetup.transform.rotation;
+            trialSpaceRotatedMovementSpace.transform.position = trialSpaceSetup.transform.position;
+            trialSpaceRotatedMovementSpace.transform.rotation = trialSpaceSetup.transform.rotation;
+            trialTarget.transform.rotation = trialSpace.transform.rotation;
+
+            trialTarget.transform.localPosition = new Vector3(
+                trialTarget.transform.localPosition.x,
+                trialTarget.transform.localPosition.y,
+                trial.settings.GetFloat("targetDistance")
+            );
+            
+
+            if (trial.settings.GetBool("applyRandomRotation"))
+            {
+                float randomRotationRange = trial.settings.GetFloat("randomRotationRange");
+                trialSpaceRotationY = UnityEngine.Random.Range(-randomRotationRange, randomRotationRange);
+                trialSpace.transform.Rotate(0f, trialSpaceRotationY, 0f);
+            }
             startPos = trialStart.transform.position;
-            targetPos = new Vector3(0f, 0f, 0.4f);
+            targetPos = trialTarget.transform.position;
             controllerSphereScript.Visible(true);
             trialStartScript.Visible(true);
             trialTargetScript.Visible(true);
-            trialTargetScript.PositionAnchor(targetPos);
             trialTargetScript.ColorObj(standbyGrey);
             trialStartScript.ColorObj(startTeal);
             controllerSphereScript.ResetVisualOffset();
-            float breakTimer = Random.Range(0.5f, 0.75f);
+
+            float breakTimer = UnityEngine.Random.Range(0.5f, 0.75f);
             float timer = 0f;
             bool readyButtonPressed = false;
             Vector3 initiatePosition = new Vector3();
@@ -517,7 +526,7 @@ public class TaskRunner : MonoBehaviour
 
             if (trial.settings.GetInt("nTargets") == 1)
             {
-                StartCoroutine(Vibration(trial));
+                vibrationCR = StartCoroutine(Vibration(trial));
                 trialStartScript.Visible(false);
                 controllerSphereScript.Visible(trial.settings.GetBool("controllerVisibleTrialStart"));
 
@@ -532,6 +541,11 @@ public class TaskRunner : MonoBehaviour
                     0f,
                     trial.settings.GetFloat("visualXrotation"),
                     0f);
+                trialTarget.transform.RotateAround(
+                    rotateAround,
+                    Vector3.up,
+                    trial.settings.GetFloat("visualXrotation");
+                )
                 trialTargetScript.ColorObj(targetGreen);
                 // Trial is now initiated
                 // Controller visibility
@@ -602,9 +616,35 @@ public class TaskRunner : MonoBehaviour
         {
             Debug.LogError("nDims must be 1 or 2");
         }
+        if (vibrationCR != null)
+        {
+            StopCoroutine(vibrationCR);
+            if (vibLeft.isPlaying)
+            {
+                vibLeft.Stop();
+            }
+            if (vibRight.isPlaying)
+            {
+                vibRight.Stop();
+            }
+            if (vibBoth.isPlaying)
+            {
+                vibBoth.Stop();
+            }
+            Debug.LogWarning("VibrationCR stopped from main trial CR");
+        }
+        if (rotatePacerCR != null)
+        {
+            StopCoroutine(rotatePacerCR);
+            positionPacerScript.Visible(false);
+            Debug.LogWarning("rotatePacerCR stopped from main trial CR");
+        }
+
         SaveResults(trial);
         arduinoReciever.SaveDataFrame(trial);
 
+        yield return new WaitForSeconds(0.1f);
+        Debug.Log($"trialEndButtonPressed is now 2: {trialEndButtonPressed}");
         trial.End();
     }
 
@@ -734,15 +774,14 @@ public class TaskRunner : MonoBehaviour
             controllerSphereScript.Visible(true);
             Debug.Log("ControllerVisibility, controllerSphereScript set to true");
         }
+        if (trial.settings.GetBool("turnTargetVisibleMidpoint"))
 
         trialProgress = "trialControlVisibilityOn";
         trialControlVisibilityOnTime = Time.time;
-        if (trial.settings.GetBool("turnControllerVisibleMidpoint"))
+
+        for (int i = 0; i < trial.settings.GetInt("controllerMidpointVisibleFrames"); i++)
         {
-            for (int i = 0; i < trial.settings.GetInt("controllerMidpointVisibleFrames"); i++)
-            {
-                yield return null;
-            }
+            yield return null;
         }
         trialProgress = "trialControlVisibilityOff";
         trialControlVisibilityOffTime = Time.time;
@@ -753,6 +792,7 @@ public class TaskRunner : MonoBehaviour
             Debug.Log("ControllerVisibility, controllerSphereScript set to false");
         }
     }
+    
 
     IEnumerator Vibration(Trial trial)
     {
@@ -760,14 +800,29 @@ public class TaskRunner : MonoBehaviour
         int nDims = trial.settings.GetInt("nDims");
         if (trial.settings.GetFloat("vibrationStartFraction") > 0f)
         {
-            if (nDims == 1)
+            while (true)
             {
-                yield return new WaitUntil(() => (Mathf.Abs(angleStartToController)/Mathf.Abs(trial.settings.GetFloat("targetDegrees")) >= trial.settings.GetFloat("vibrationStartFraction")));
-                Debug.Log($"delayed vibration started, fraction: {Mathf.Abs(angleStartToController)/Mathf.Abs(trial.settings.GetFloat("targetDegrees"))}");
-            }
-            else if (nDims == 2)
-            {
-                yield return new WaitUntil(() => ((controllerSphere.transform.localPosition.z / trialTarget.transform.localPosition.z) >= trial.settings.GetFloat("vibrationStartFraction")));
+                if (nDims == 1)
+                {
+                    float currFrac = Mathf.Abs(angleStartToPacer)/Mathf.Abs(trial.settings.GetFloat("targetDegrees"));
+                    // Debug.Log($"currFrac {currFrac}, break frac is {trial.settings.GetFloat("vibrationStartFraction")}");
+                    if (currFrac >= trial.settings.GetFloat("vibrationStartFraction"))
+                    {
+                        // Debug.Log($"break cond triggered");
+                        break;
+                    }
+                }
+                else if (nDims == 2)
+                {
+                    float currFrac = controllerSphere.transform.localPosition.z / trialTarget.transform.localPosition.z;
+                    Debug.Log($"currFrac {currFrac}, break frac is {trial.settings.GetFloat("vibrationStartFraction")}");
+                    if (currFrac >= trial.settings.GetFloat("vibrationStartFraction"))
+                    {
+                        // Debug.Log($"break cond triggered");
+                        break;
+                    }
+                }
+                yield return null;
             }
         }
         int frameCounter = 0;
@@ -793,27 +848,48 @@ public class TaskRunner : MonoBehaviour
             Debug.LogError($"vibration was set to: {vibration}. Must be either left, right, both or none");
         }
         Debug.Log($"Vibration {vibration} started");
-        if (trial.settings.GetFloat("vibrationEndFraction") < 1f)
+
+        while (true)
         {
-            if (nDims == 1)
+            if (trialEndButtonPressed)
             {
-                yield return new WaitUntil(() => ((Mathf.Abs(angleStartToController)/Mathf.Abs(trial.settings.GetFloat("targetDegrees")) >= trial.settings.GetFloat("vibrationEndFraction") | trialEndButtonPressed)));
-                Debug.Log($"early vibration stop {Mathf.Abs(angleStartToController)/Mathf.Abs(trial.settings.GetFloat("targetDegrees"))}");
+                break;
+            }
+            if (nDims == 1 && trial.settings.GetFloat("vibrationEndFraction") < 1.0f)
+            {
+                float currFrac = Mathf.Abs(angleStartToPacer)/Mathf.Abs(trial.settings.GetFloat("targetDegrees"));
+                // Debug.Log($"currFrac {currFrac}, break frac is {trial.settings.GetFloat("vibrationEndFraction")}");
+                if (currFrac >= trial.settings.GetFloat("vibrationEndFraction"))
+                {
+                    break;
+                }
             }
             else if (nDims == 2)
             {
-                yield return new WaitUntil(() => (((controllerSphere.transform.localPosition.z / trialTarget.transform.localPosition.z) >= trial.settings.GetFloat("vibrationEndFraction") | trialEndButtonPressed)));
+                float currFrac = controllerSphere.transform.localPosition.z / trialTarget.transform.localPosition.z;
+                // Debug.Log($"currFrac {currFrac}, break frac is {trial.settings.GetFloat("vibrationEndFraction")}");
+                if (currFrac >= trial.settings.GetFloat("vibrationEndFraction"))
+                {
+                    break;
+                }
             }
+            yield return null;
         }
-        else{
-            yield return new WaitUntil(() => (trialEndButtonPressed));
-        }
-
+        // Debug.Log("Vibration coroutine progressed");
         trialVibStop = Time.time + FrameTimer.FrameStopwatch.Elapsed.TotalMilliseconds/1000.0;
         arduinoReciever.SendTrigger("false");
-        vibLeft.Stop();
-        vibRight.Stop();
-        vibBoth.Stop();
+        if (vibLeft.isPlaying)
+        {
+            vibLeft.Stop();
+        }
+        if (vibRight.isPlaying)
+        {
+            vibRight.Stop();
+        }
+        if (vibBoth.isPlaying)
+        {
+            vibBoth.Stop();
+        }
         Debug.Log($"vibration {vibration} stopped, with duration: {trialVibStop - trialVibStart}");
     }
 
@@ -975,6 +1051,7 @@ public class TaskRunner : MonoBehaviour
     }
     IEnumerator RotatePacer(Vector3 startPos, Vector3 endPos, float duration)
     {
+        float starttime = Time.time;
         positionPacerScript.ColorObj(activeBlue);
         Debug.Log("rotatePacer started");
         positionPacerScript.Visible(true);
@@ -987,7 +1064,7 @@ public class TaskRunner : MonoBehaviour
         {
             float t = elapsedTime / duration; 
             // float easedT = Easing.IntegratedLognormal(t, 0.3f, 0.7f); 
-            float easedT = Easing.SymmetricQuad(t); 
+            // float easedT = Easing.SymmetricQuad(t); 
             rotationPacer.transform.rotation = Quaternion.Slerp(startRotation, endRotation, t);
             // rotationPacer.transform.rotation = Quaternion.Slerp(startRotation, endRotation, easedT);
             elapsedTime += Time.deltaTime;
@@ -996,7 +1073,7 @@ public class TaskRunner : MonoBehaviour
 
         rotationPacer.transform.rotation = endRotation;
         positionPacerScript.Visible(false);
-        Debug.Log("rotatePacer ended");
+        Debug.Log($"total pacer duration set to {Time.time - starttime}, intended dur was {duration}");
     }
     private void CalibrateCircleCenter(List<Vector3> points, int nSets = 10)
     {
@@ -1137,22 +1214,25 @@ public class TaskRunner : MonoBehaviour
 
         return angle;
     }
-    private float CalcOffsetAngle(float currentAngle, float multiplier, float startOffsetFraction, float  endOffsetFraction, float targetAngle)
+    private float CalcOffsetAngle(float currentAngle, float multiplier, float startOffsetFraction, float endOffsetFraction, float targetAngle)
     {
-        float offsetAngle;
-        // float currentFraction = currentAngle / targetAngle;
         float startOffsetAngle = targetAngle * startOffsetFraction;
         float endOffsetAngle = targetAngle * endOffsetFraction;
+
+        float offsetAngle;
         if (currentAngle <= startOffsetAngle)
         {
             offsetAngle = currentAngle;
         }
-        else if (currentAngle < startOffsetAngle | currentAngle <= endOffsetAngle)
+        else if (currentAngle <= endOffsetAngle)
         {
-            offsetAngle = (startOffsetAngle) + ((currentAngle-startOffsetAngle) * multiplier);
+            offsetAngle = startOffsetAngle + ((currentAngle - startOffsetAngle) * multiplier);
         }
-        else {
-            offsetAngle = (startOffsetAngle) + ((endOffsetAngle-startOffsetAngle) * multiplier) + ((currentAngle - endOffsetAngle));
+        else
+        {
+            offsetAngle = startOffsetAngle 
+                + ((endOffsetAngle - startOffsetAngle) * multiplier) 
+                + (currentAngle - endOffsetAngle);
         }
         return offsetAngle;
     }

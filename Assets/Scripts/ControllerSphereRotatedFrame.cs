@@ -5,6 +5,7 @@ public class ControllerSphereRotatedFrame : MonoBehaviour
     public GameObject trialSpace;
     // public GameObject trialSpaceRotatedMovementSpace;
     public GameObject rightHandAnchor;
+    public GameObject targetAnchor;
 
     void Update()
     {

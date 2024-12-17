@@ -559,7 +559,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 114916036141644208, guid: 0a3b6392f04558844bd340e68ced1ff9, type: 3}
       propertyPath: settingsToLog.Array.size
-      value: 7
+      value: 18
       objectReference: {fileID: 0}
     - target: {fileID: 114916036141644208, guid: 0a3b6392f04558844bd340e68ced1ff9, type: 3}
       propertyPath: trackedObjects.Array.size
@@ -592,6 +592,50 @@ PrefabInstance:
     - target: {fileID: 114916036141644208, guid: 0a3b6392f04558844bd340e68ced1ff9, type: 3}
       propertyPath: 'settingsToLog.Array.data[6]'
       value: blockNumber
+      objectReference: {fileID: 0}
+    - target: {fileID: 114916036141644208, guid: 0a3b6392f04558844bd340e68ced1ff9, type: 3}
+      propertyPath: 'settingsToLog.Array.data[7]'
+      value: visualXrotation
+      objectReference: {fileID: 0}
+    - target: {fileID: 114916036141644208, guid: 0a3b6392f04558844bd340e68ced1ff9, type: 3}
+      propertyPath: 'settingsToLog.Array.data[8]'
+      value: vibration
+      objectReference: {fileID: 0}
+    - target: {fileID: 114916036141644208, guid: 0a3b6392f04558844bd340e68ced1ff9, type: 3}
+      propertyPath: 'settingsToLog.Array.data[9]'
+      value: practice
+      objectReference: {fileID: 0}
+    - target: {fileID: 114916036141644208, guid: 0a3b6392f04558844bd340e68ced1ff9, type: 3}
+      propertyPath: 'settingsToLog.Array.data[10]'
+      value: targetDegrees
+      objectReference: {fileID: 0}
+    - target: {fileID: 114916036141644208, guid: 0a3b6392f04558844bd340e68ced1ff9, type: 3}
+      propertyPath: 'settingsToLog.Array.data[11]'
+      value: rotationPacer
+      objectReference: {fileID: 0}
+    - target: {fileID: 114916036141644208, guid: 0a3b6392f04558844bd340e68ced1ff9, type: 3}
+      propertyPath: 'settingsToLog.Array.data[12]'
+      value: vibrationStartFraction
+      objectReference: {fileID: 0}
+    - target: {fileID: 114916036141644208, guid: 0a3b6392f04558844bd340e68ced1ff9, type: 3}
+      propertyPath: 'settingsToLog.Array.data[13]'
+      value: vibrationEndFraction
+      objectReference: {fileID: 0}
+    - target: {fileID: 114916036141644208, guid: 0a3b6392f04558844bd340e68ced1ff9, type: 3}
+      propertyPath: 'settingsToLog.Array.data[14]'
+      value: controllerMidpointVisibleFrames
+      objectReference: {fileID: 0}
+    - target: {fileID: 114916036141644208, guid: 0a3b6392f04558844bd340e68ced1ff9, type: 3}
+      propertyPath: 'settingsToLog.Array.data[15]'
+      value: targetDistance
+      objectReference: {fileID: 0}
+    - target: {fileID: 114916036141644208, guid: 0a3b6392f04558844bd340e68ced1ff9, type: 3}
+      propertyPath: 'settingsToLog.Array.data[16]'
+      value: nTargets
+      objectReference: {fileID: 0}
+    - target: {fileID: 114916036141644208, guid: 0a3b6392f04558844bd340e68ced1ff9, type: 3}
+      propertyPath: 'settingsToLog.Array.data[17]'
+      value: trialOrientation
       objectReference: {fileID: 0}
     - target: {fileID: 114916036141644208, guid: 0a3b6392f04558844bd340e68ced1ff9, type: 3}
       propertyPath: 'trackedObjects.Array.data[0]'
@@ -1564,9 +1608,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   isRunning: 0
+  useMPU: 0
+  useAudio: 1
   mpuCOMPort: COM20
-  audioCOMPort: COM21
-  Baudrate: 500000
+  audioCOMPort: COM22
+  Baudrate: 1000000
   MPU6050_ACCEL_FS: 8
   saving: 0
   pcSendTime: 0
@@ -1720,7 +1766,7 @@ Transform:
   m_GameObject: {fileID: 340629856}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0, y: 0, z: 0.45}
+  m_LocalPosition: {x: -0, y: 0, z: 0.4}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -2404,7 +2450,7 @@ AudioSource:
   DopplerLevel: 0
   MinDistance: 1
   MaxDistance: 500
-  Pan2D: 0
+  Pan2D: -1
   rolloffMode: 2
   BypassEffects: 1
   BypassListenerEffects: 1
@@ -4140,7 +4186,7 @@ MonoBehaviour:
   showDebugSpheresRotation: 0
   showDebugSphere: 0
   showConsole: 1
-  debugAudio: 0
+  debugAudio: 1
   angleToCalibrateWith: 75
   blockInstructionsText: {fileID: 89409138}
   generateInstructions: {fileID: 1372467475}
@@ -4198,7 +4244,7 @@ MonoBehaviour:
   vibLeft: {fileID: 590285140}
   vibRight: {fileID: 1743514168}
   vibBoth: {fileID: 636973964}
-  vibrationVolume: 0.7
+  vibrationVolume: 1
   vibrationTriggered: 0
   trialCounter: {fileID: 1779334755}
   trialSpaceRotationY: 0
@@ -5117,7 +5163,7 @@ AudioSource:
   DopplerLevel: 0
   MinDistance: 1
   MaxDistance: 500
-  Pan2D: 0
+  Pan2D: 1
   rolloffMode: 2
   BypassEffects: 1
   BypassListenerEffects: 1
@@ -6433,7 +6479,7 @@ Transform:
   m_GameObject: {fileID: 2124405530}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.272, y: 0, z: 0}
+  m_LocalPosition: {x: -0.102, y: 0, z: 0.054}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
