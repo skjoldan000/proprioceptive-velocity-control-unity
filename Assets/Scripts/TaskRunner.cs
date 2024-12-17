@@ -20,6 +20,7 @@ public class TaskRunner : MonoBehaviour
     // Objects and attached scripts
     private Config c;
     private FrameTimer frameTimer;
+    public GameObject UserInputSelector;
     public TextMeshPro blockInstructionsText;
     public GenerateInstructions generateInstructions;
     public GameObject trialSpaceAll;
@@ -81,7 +82,6 @@ public class TaskRunner : MonoBehaviour
     private float visualSpeedOffsetStartFraction;
     private float visualSpeedOffsetEndFraction;
     private float angleStartToControllerLastFrame;
-    private float angleOffset = 0f;
 
     // Materials
     public Material targetGreen;
@@ -97,8 +97,8 @@ public class TaskRunner : MonoBehaviour
     // Trial progress
     private bool calibrationComplete = false;
     public bool calibrationArmrestComplete = false;
+    public bool UserInputSelectorCRComplete = false;
     public bool savePointsForCalibrationComplete = false;
-    
     private bool blockInstructionsComplete = false;
     public string trialProgress;
     public string trialID;
@@ -437,8 +437,8 @@ public class TaskRunner : MonoBehaviour
             trialTarget.transform.rotation = trialSpace.transform.rotation;
 
             trialTarget.transform.localPosition = new Vector3(
-                trialTarget.transform.localPosition.x,
-                trialTarget.transform.localPosition.y,
+                0f,
+                0f,
                 trial.settings.GetFloat("targetDistance")
             );
             
@@ -449,11 +449,13 @@ public class TaskRunner : MonoBehaviour
                 trialSpaceRotationY = UnityEngine.Random.Range(-randomRotationRange, randomRotationRange);
                 trialSpace.transform.Rotate(0f, trialSpaceRotationY, 0f);
             }
+
             startPos = trialStart.transform.position;
             targetPos = trialTarget.transform.position;
             controllerSphereScript.Visible(true);
             trialStartScript.Visible(true);
             trialTargetScript.Visible(true);
+            Debug.Log("trialTargetScript.Visible(true);");
             trialTargetScript.ColorObj(standbyGrey);
             trialStartScript.ColorObj(startTeal);
             controllerSphereScript.ResetVisualOffset();
@@ -529,23 +531,26 @@ public class TaskRunner : MonoBehaviour
                 vibrationCR = StartCoroutine(Vibration(trial));
                 trialStartScript.Visible(false);
                 controllerSphereScript.Visible(trial.settings.GetBool("controllerVisibleTrialStart"));
+                trialTargetScript.Visible(trial.settings.GetBool("targetVisibleTrialStart"));
+                Debug.Log($"trialTargetScript.Visible() set to {trial.settings.GetBool("targetVisibleTrialStart")}");
 
 
-                controllerSphereScript.visualOffsetFromReference(new Vector3(
-                    trial.settings.GetFloat("visualXOffset"), 
-                    0, 
-                    trial.settings.GetFloat("visualZOffset")),
-                    trialSpace.transform);
+                // controllerSphereScript.visualOffsetFromReference(new Vector3(
+                //     trial.settings.GetFloat("visualXOffset"), 
+                //     0, 
+                //     trial.settings.GetFloat("visualZOffset")),
+                //     trialSpace.transform);
 
                 trialSpaceRotatedMovementSpace.transform.Rotate(
                     0f,
                     trial.settings.GetFloat("visualXrotation"),
                     0f);
+
                 trialTarget.transform.RotateAround(
-                    rotateAround,
+                    trialSpace.transform.position,
                     Vector3.up,
-                    trial.settings.GetFloat("visualXrotation");
-                )
+                    trial.settings.GetFloat("visualTargetXrotation")
+                );
                 trialTargetScript.ColorObj(targetGreen);
                 // Trial is now initiated
                 // Controller visibility
@@ -603,6 +608,13 @@ public class TaskRunner : MonoBehaviour
             arduinoReciever.saving = false;
             trialProgress = "trialInput";
             trialInputTime = Time.time;
+
+            if (trial.settings.GetBool("userInputSelector"))
+            {
+                UserInputSelectorCRComplete = false;
+                StartCoroutine(UserInputSelectorCR());
+                yield return new WaitUntil(() => UserInputSelectorCRComplete);
+            }
 
             trialStartScript.Visible(true);
             trialTargetScript.PositionAnchor(targetPos);
@@ -772,13 +784,14 @@ public class TaskRunner : MonoBehaviour
         if (trial.settings.GetBool("turnControllerVisibleMidpoint"))
         {
             controllerSphereScript.Visible(true);
-            Debug.Log("ControllerVisibility, controllerSphereScript set to true");
         }
         if (trial.settings.GetBool("turnTargetVisibleMidpoint"))
+        {
+            trialTargetScript.Visible(true);
+        }
 
         trialProgress = "trialControlVisibilityOn";
         trialControlVisibilityOnTime = Time.time;
-
         for (int i = 0; i < trial.settings.GetInt("controllerMidpointVisibleFrames"); i++)
         {
             yield return null;
@@ -789,7 +802,10 @@ public class TaskRunner : MonoBehaviour
         if (trial.settings.GetBool("turnControllerVisibleMidpoint"))
         {
             controllerSphereScript.Visible(false);
-            Debug.Log("ControllerVisibility, controllerSphereScript set to false");
+        }
+        if (trial.settings.GetBool("turnTargetVisibleMidpoint"))
+        {
+            trialTargetScript.Visible(false);
         }
     }
     
@@ -815,7 +831,7 @@ public class TaskRunner : MonoBehaviour
                 else if (nDims == 2)
                 {
                     float currFrac = controllerSphere.transform.localPosition.z / trialTarget.transform.localPosition.z;
-                    Debug.Log($"currFrac {currFrac}, break frac is {trial.settings.GetFloat("vibrationStartFraction")}");
+                    // Debug.Log($"currFrac {currFrac}, break frac is {trial.settings.GetFloat("vibrationStartFraction")}");
                     if (currFrac >= trial.settings.GetFloat("vibrationStartFraction"))
                     {
                         // Debug.Log($"break cond triggered");
@@ -825,7 +841,6 @@ public class TaskRunner : MonoBehaviour
                 yield return null;
             }
         }
-        int frameCounter = 0;
         trialVibStart = Time.time + FrameTimer.FrameStopwatch.Elapsed.TotalMilliseconds/1000.0;
         arduinoReciever.SendTrigger("true");
         if (vibration == "biceps")
@@ -1074,6 +1089,74 @@ public class TaskRunner : MonoBehaviour
         rotationPacer.transform.rotation = endRotation;
         positionPacerScript.Visible(false);
         Debug.Log($"total pacer duration set to {Time.time - starttime}, intended dur was {duration}");
+    }
+
+    IEnumerator UserInputSelectorCR()
+    {
+        UserInputSelector.SetActive(true);
+        int selectedPane = 0;
+        GameObject UserInputSelector1 = UserInputSelector.transform.Find("UserInputSelector1").gameObject;
+        GameObject UserInputSelector3 = UserInputSelector.transform.Find("UserInputSelector3").gameObject;
+
+        UserInputSelector1.GetComponent<Renderer>().material = standbyGrey;
+        UserInputSelector3.GetComponent<Renderer>().material = standbyGrey;
+
+        TextMeshPro UserInputSelectorText = UserInputSelector.GetComponentInChildren<TextMeshPro>();
+        string currentInput = "____";
+        UserInputSelectorText.text = $"Please indicate if you think the virtual controller was shown to the {currentInput} compared to you actual hand";
+
+        TextMeshPro lChoiceTMP = UserInputSelector1.GetComponentInChildren<TextMeshPro>();
+        TextMeshPro rChoiceTMP = UserInputSelector3.GetComponentInChildren<TextMeshPro>();
+        lChoiceTMP.text = "left";
+        rChoiceTMP.text = "right";
+
+        // select whether virtual controller is believed to be slower or faster compared to real hand
+        while (true)
+        {
+            float stickX = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, OVRInput.Controller.RTouch).x;
+            float stickY = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, OVRInput.Controller.RTouch).y;
+
+            // select left (1) pane
+            if (stickX < -0.75)
+            {
+                selectedPane = 1;
+                currentInput = "[left]";
+                UserInputSelectorText.text = $"Please indicate if you think the virtual controller was shown to the {currentInput} compared to you actual hand";
+                UserInputSelector1.GetComponent<Renderer>().material = targetGreen;
+                UserInputSelector3.GetComponent<Renderer>().material = standbyGrey;
+            }
+            // select right (3) pane
+            if (stickX > 0.75)
+            {
+                selectedPane = 3;
+                currentInput = "[right]";
+                UserInputSelectorText.text = $"Please indicate if you think the virtual controller was shown to the {currentInput} compared to you actual hand";
+                UserInputSelector1.GetComponent<Renderer>().material = standbyGrey;
+                UserInputSelector3.GetComponent<Renderer>().material = targetGreen;
+            }
+
+            // deselect pane
+            if (stickY < -0.75)
+            {
+                selectedPane = 0;
+                currentInput = "____";
+                UserInputSelectorText.text = $"Please indicate if you think the virtual controller was shown to the {currentInput} compared to you actual hand";
+                UserInputSelector1.GetComponent<Renderer>().material = standbyGrey;
+                UserInputSelector3.GetComponent<Renderer>().material = standbyGrey;
+            }
+            // confirm selection and break
+            if (selectedPane > 0 && OVRInput.GetDown(OVRInput.Button.One))
+            {
+                Session.instance.CurrentTrial.result["userInput"] = selectedPane;
+                Session.instance.CurrentTrial.result["trialUserInputTimme"] = Time.time;
+                break;
+            }
+            yield return null;
+        }
+        Debug.Log("selected slower/faster: "+ selectedPane);
+
+        UserInputSelector.SetActive(false);
+        UserInputSelectorCRComplete = true;
     }
     private void CalibrateCircleCenter(List<Vector3> points, int nSets = 10)
     {

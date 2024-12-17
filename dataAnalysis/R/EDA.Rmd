@@ -207,6 +207,7 @@ tracking %>%
 tracking %>%
   group_by(trialID) %>% 
   mutate(endtime = time[aButtonDown == TRUE]) %>% 
+  filter(trialProgress %in% c("trialStarted")) %>% 
   filter(time <= endtime) %>% 
   filter(block_num == 3) %>% 
   ggplot(aes(x = angleStartToPacer, y = angleStartToController, group = trialID, color = vibration))+
@@ -224,12 +225,15 @@ tracking %>%
   mutate(endtime = time[aButtonDown == TRUE]) %>% 
   filter(time <= endtime) %>% 
   filter(block_num == 3) %>% 
-  ggplot(aes(x = angleStartToPacer, y = angleStartToController, group = trialID, color = vibration))+
-  geom_path()+
+  filter(trialProgress %in% c("trialStarted")) %>% 
+  filter(angleStartToController > 0.5) %>% 
+  ggplot(aes(x = angleStartToPacer, y = angleStartToController, color = vibration))+
+  # geom_path(aes(group = trialID))+
   geom_abline(intercept = 0, slope = 1, color = "black", linetype = "dashed")+
   geom_vline(xintercept = - 40 + 6.5, color = "black", linetype = "dashed")+
   geom_vline(xintercept = 80, color = "black", linetype = "dashed")+
   geom_hline(yintercept = 80, color = "black", linetype = "dashed")+
+  geom_smooth(method = "lm")+
   facet_grid(
     rows = vars(vibrationStartFraction))   
 
@@ -237,6 +241,11 @@ tracking %>%
 
 
 
+```{r}
+2 * pi * 40 * (10/360)
+2 * pi * 15 * (10/360)
+
+```
 
 
 
